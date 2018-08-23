@@ -29,7 +29,7 @@ func main() {
 	}
 	log.SetFormatter(formatter)
 
-	log.Info("Starting gateway.")
+	log.Info("Starting gateway (logging added to the events endpoint).")
 
 	options := parseArgs()
 	log.Infof("Options: %s", options)
