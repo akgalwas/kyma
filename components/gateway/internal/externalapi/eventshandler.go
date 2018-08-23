@@ -10,6 +10,7 @@ import (
 	"github.com/kyma-project/kyma/components/gateway/internal/events/bus"
 	"github.com/kyma-project/kyma/components/gateway/internal/events/shared"
 	log "github.com/sirupsen/logrus"
+	"net/http/httputil"
 )
 
 var (
@@ -25,6 +26,8 @@ func NewEventsHandler() http.Handler {
 // EventsHandler handles "/v1/events" requests
 func handleEvents(w http.ResponseWriter, req *http.Request) {
 	if req.Body == nil || req.ContentLength == 0 {
+		log.Error("Request body is empty.")
+		logRequest(req)
 		resp := shared.ErrorResponseBadRequest(shared.ErrorMessageBadPayload)
 		writeJsonResponse(w, resp)
 		return
@@ -34,6 +37,8 @@ func handleEvents(w http.ResponseWriter, req *http.Request) {
 	decoder := json.NewDecoder(req.Body)
 	err = decoder.Decode(&parameters.Publishrequest)
 	if err != nil {
+		log.Error("Failed to decode request body.")
+		logRequest(req)
 		resp := shared.ErrorResponseBadRequest(err.Error())
 		writeJsonResponse(w, resp)
 		return
@@ -45,14 +50,20 @@ func handleEvents(w http.ResponseWriter, req *http.Request) {
 	err = handleEvent(parameters, resp, traceHeaders)
 	if err == nil {
 		if resp.Ok != nil || resp.Error != nil {
+			if resp.Error != nil {
+				log.Error("Failed to process response from Event Bus.")
+				logRequest(req)
+			}
 			writeJsonResponse(w, resp)
 			return
 		}
 		log.Println("Cannot process event")
+		logRequest(req)
 		http.Error(w, "Cannot process event", http.StatusInternalServerError)
 		return
 	}
 	log.Printf("Internal Error: %s\n", err.Error())
+	logRequest(req)
 	http.Error(w, err.Error(), http.StatusInternalServerError)
 	return
 }
@@ -60,17 +71,20 @@ func handleEvents(w http.ResponseWriter, req *http.Request) {
 var handleEvent = func(publishRequest *api.PublishEventParameters, publishResponse *api.PublishEventResponses, traceHeaders *map[string]string) (err error) {
 	checkResp := checkParameters(publishRequest)
 	if checkResp.Error != nil {
+		log.Error("Validating event failed.")
 		publishResponse.Error = checkResp.Error
 		return
 	}
 	// add source to the incoming request
 	sendRequest, err := bus.AddSource(publishRequest)
 	if err != nil {
+		log.Error("Failed to add source to the request.")
 		return err
 	}
 	// send the event
 	sendEventResponse, err := bus.SendEvent(sendRequest, traceHeaders)
 	if err != nil {
+		log.Error("Failed to send event.")
 		return err
 	}
 	publishResponse.Ok = sendEventResponse.Ok
@@ -112,6 +126,7 @@ func checkParameters(parameters *api.PublishEventParameters) (response *api.Publ
 func writeJsonResponse(w http.ResponseWriter, resp *api.PublishEventResponses) {
 	encoder := json.NewEncoder(w)
 	if resp.Error != nil {
+		log.Error("Error occurred: " + resp.Error.Message)
 		w.WriteHeader(resp.Error.Status)
 		encoder.Encode(resp.Error)
 	} else {
@@ -128,4 +143,22 @@ func getTraceHeaders(req *http.Request) *map[string]string {
 		}
 	}
 	return &traceHeaders
+}
+
+func logRequest(req *http.Request) {
+	reqString, err := httputil.DumpRequest(req, true)
+	if err == nil {
+		log.Infof("Request: %s", reqString)
+	} else {
+		log.Error("Failed to dump request")
+	}
+}
+
+func logResponse(res *http.Response) {
+   resString, err := httputil.DumpResponse(res, true)
+	if err == nil {
+		log.Infof("Request: %s", resString)
+	} else {
+		log.Error("Failed to dump request")
+	}
 }
