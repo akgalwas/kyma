@@ -25,6 +25,7 @@ func NewEventsHandler() http.Handler {
 
 // EventsHandler handles "/v1/events" requests
 func handleEvents(w http.ResponseWriter, req *http.Request) {
+	log.Info("Handling request")
 	if req.Body == nil || req.ContentLength == 0 {
 		log.Error("Request body is empty.")
 		logRequest(req)
