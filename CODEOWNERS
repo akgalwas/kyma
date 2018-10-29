@@ -28,6 +28,9 @@
 # The `values.yaml` file for `application-connector` chart
 /resources/application-connector/values.yaml @kyma-project/developers
 
+# The `heptio ark` chart
+/resources/ark/ @mwieczorek @joek @rakesh-garimella @sayanh @venturasr @lilitgh
+
 # The `api-controller` subchart
 /resources/core/charts/api-controller/ @piotrmsc @kubadz @sjanota
 
@@ -38,10 +41,13 @@
 /resources/core/charts/azure-broker/ @Tomasz-Smelcerz-SAP @strekm @jakkab @crabtree
 
 # The `cluster-users` subchart
-/resources/core/charts/cluster-users/ @piotrmsc
+/resources/core/charts/cluster-users/ @piotrmsc @kubadz @sjanota
 
 # The `configurations-generator` subchart
-/resources/core/charts/configurations-generator @piotrmsc @kubadz
+/resources/core/charts/configurations-generator @piotrmsc @kubadz @sjanota
+
+# The `application-connector` chart
+/resources/application-connector/ @lszymik @akgalwas @janmedrek @Szymongib @franpog859 @Maladie @crabtree
 
 # The `connector-service` subchart
 /resources/application-connector/charts/connector-service/ @lszymik @akgalwas @janmedrek @Szymongib @franpog859 @Maladie @crabtree
@@ -59,7 +65,7 @@
 /resources/core/charts/console/ @pekura @maxmarkus @jesusreal @kwiatekus @dariadomagala @hardl @y-kkamil @antiheld
 
 # The `dex` subchart
-/resources/core/charts/dex/ @piotrmsc @kubadz
+/resources/dex/ @piotrmsc @kubadz @sjanota
 
 # The `istio-rbac` subchart
 /resources/core/charts/istio-rbac/ @piotrmsc @kubadz @sjanota
@@ -147,7 +153,7 @@
 /components/apiserver-proxy/ @piotrmsc @kubadz @sjanota
 
 # Api controller Component
-/components/api-controller/ @piotrmsc @kubadz
+/components/api-controller/ @piotrmsc @kubadz @sjanota
 
 # Binding usage controller Component
 /components/binding-usage-controller/ @aszecowka @PK85 @mszostok @piotrmiskiewicz @polskikiel @jasiu001
@@ -162,7 +168,7 @@
 /components/environments/ @Tomasz-Smelcerz-SAP @strekm @jakkab @crabtree
 
 # Istio Extensions Component
-/components/istio-webhook/ @piotrmsc
+/components/istio-webhook/ @piotrmsc @sjanota @kubadz
 
 # Istio Extensions Component
 /components/istio-kyma-patch/ @piotrmsc @sjanota @kubadz
@@ -188,19 +194,19 @@
 # Remote Environment Controller Component
 /components/remote-environment-controller/ @lszymik @akgalwas @janmedrek @Szymongib @franpog859 @Maladie @crabtree
 
-# Gateway Component
-/components/gateway/ @lszymik @akgalwas @janmedrek @Szymongib @franpog859 @Maladie @crabtree
+# Proxy Service Component
+/components/proxy-service/ @lszymik @akgalwas @janmedrek @Szymongib @franpog859 @Maladie @crabtree
 
 # Event Bus Component
 /components/event-bus/ @Abd4llA @montaro @abbi-gaurav @marcobebway @radufa @sslavic
 
-# Event Gateway Component
+# Event Service Component
 /components/event-service/ @Abd4llA @montaro @abbi-gaurav @marcobebway @radufa @sslavic
 
 # Tests
 # acceptance tests
 /tests/acceptance/ @mszostok @polskikiel @piotrmiskiewicz @aszecowka @PK85 @jasiu001
-/tests/acceptance/dex @pssap @piotrmsc
+/tests/acceptance/dex @sjanota @piotrmsc @kubadz
 
 # test-environments
 /tests/test-environemnts/ @Tomasz-Smelcerz-SAP @strekm @jakkab @crabtree
@@ -212,7 +218,7 @@
 /tests/logging/ @rakesh-garimella @joek @sayanh @venturasr @lilitgh
 
 # api-controller acceptance tests
-/tests/api-controller-acceptance-tests/ @piotrmsc
+/tests/api-controller-acceptance-tests/ @piotrmsc @kubadz @sjanota
 
 # UI API Layer acceptance tests
 /tests/ui-api-layer-acceptance-tests/ @akucharska @michal-hudy @pkosiec @mjasinski5 @aerfio @magicmatatjahu @aszecowka @PK85 @mszostok @piotrmiskiewicz @polskikiel @jasiu001
@@ -245,11 +251,17 @@
 # The changelog-generator directory
 /tools/changelog-generator/ @akucharska @michal-hudy @pkosiec @mjasinski5 @aerfio @magicmatatjahu
 
+# The static-users-generator directory
+/tools/static-users-generator/ @piotrmsc @sjanota @kubadz 
+
 # kubeless-test-client tests
 /tests/kubeless-test-client/ @rakesh-garimella @joek @sayanh @venturasr @lilitgh
 
 # Event Bus Tests
 /tests/event-bus/ @Abd4llA @montaro @abbi-gaurav @marcobebway @radufa @sslavic
+
+# Event Service Tests
+/tests/gateway-tests/ @Abd4llA @montaro @abbi-gaurav @marcobebway @radufa @sslavic
 
 # All .md files
 *.md @kazydek @klaudiagrz @tomekpapiernik @bszwarc
