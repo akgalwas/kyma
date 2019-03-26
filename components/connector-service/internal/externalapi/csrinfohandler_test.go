@@ -64,6 +64,14 @@ func TestCSRInfoHandler_GetCSRInfo(t *testing.T) {
 	infoURL := "https://connector-service.test.cluster.kyma.cx/v1/applications/management/info"
 	newToken := "newToken"
 
+	application := "application"
+	tenant := "test-tenant"
+	group := "test-group"
+
+	applicationKey := "application"
+	tenantKey := "tenant"
+	groupKey := "group"
+
 	urlApps := fmt.Sprintf("/v1/applications/signingRequests/info?token=%s", token)
 
 	subjectValues := certificates.CSRSubject{
@@ -75,7 +83,7 @@ func TestCSRInfoHandler_GetCSRInfo(t *testing.T) {
 	}
 
 	dummyClientContextService := dummyClientContextService{}
-	clientContextService := func(ctx context.Context) (clientcontext.ClientContextService, apperrors.AppError) {
+	dummyClientContextExtractor := func(ctx context.Context) (clientcontext.ClientContextService, apperrors.AppError) {
 		return dummyClientContextService, nil
 	}
 
@@ -87,17 +95,28 @@ func TestCSRInfoHandler_GetCSRInfo(t *testing.T) {
 		KeyAlgorithm: "rsa2048",
 	}
 
-	t.Run("should successfully get csr info", func(t *testing.T) {
+	t.Run("should successfully get csr info for applications", func(t *testing.T) {
 		// given
 		expectedAPI := api{
 			CertificatesURL: baseURL + CertsEndpoint,
 			InfoURL:         infoURL,
 		}
 
-		tokenCreator := &tokenMocks.Creator{}
-		tokenCreator.On("Save", dummyClientContextService).Return(newToken, nil)
+		applicationContext := clientcontext.ApplicationContext{
+			Application: application,
+			ClusterContext: clientcontext.ClusterContext{
+				Tenant: tenant,
+				Group:  group,
+			},
+		}
+		applicationClientContextExtractor := func(ctx context.Context) (clientcontext.ClientContextService, apperrors.AppError) {
+			return applicationContext, nil
+		}
 
-		infoHandler := NewCSRInfoHandler(tokenCreator, clientContextService, infoURL, subjectValues, baseURL)
+		tokenCreator := &tokenMocks.Creator{}
+		tokenCreator.On("Save", applicationContext).Return(newToken, nil)
+
+		infoHandler := NewCSRInfoHandler(tokenCreator, applicationClientContextExtractor, infoURL, subjectValues, baseURL)
 
 		req, err := http.NewRequest(http.MethodPost, urlApps, bytes.NewReader(tokenRequestRaw))
 		require.NoError(t, err)
@@ -114,10 +133,73 @@ func TestCSRInfoHandler_GetCSRInfo(t *testing.T) {
 		err = json.Unmarshal(responseBody, &infoResponse)
 		require.NoError(t, err)
 
+		expectedApplicationCertInfo := certInfo{
+			Subject:      fmt.Sprintf("OU=%s,O=%s,L=%s,ST=%s,C=%s,CN=%s", organizationalUnit, organization, locality, province, country, "test-tenant;test-group;application"),
+			Extensions:   "",
+			KeyAlgorithm: "rsa2048",
+		}
+
+		receivedContext := infoResponse.ClientIdentity.(map[string]interface{})
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		assert.Equal(t, expectedSignUrl, infoResponse.CsrURL)
 		assert.EqualValues(t, expectedAPI, infoResponse.API)
-		assert.EqualValues(t, expectedCertInfo, infoResponse.CertificateInfo)
+		assert.EqualValues(t, expectedApplicationCertInfo, infoResponse.CertificateInfo)
+		assert.Equal(t, application, receivedContext[applicationKey])
+		assert.Equal(t, tenant, receivedContext[tenantKey])
+		assert.Equal(t, group, receivedContext[groupKey])
+	})
+
+	t.Run("should successfully get csr info for runtimes", func(t *testing.T) {
+		// given
+		expectedAPI := api{
+			CertificatesURL: baseURL + CertsEndpoint,
+			InfoURL:         infoURL,
+		}
+
+		clusterContext := clientcontext.ClusterContext{
+			Tenant: tenant,
+			Group:  group,
+		}
+
+		clusterContextExtractor := func(ctx context.Context) (clientcontext.ClientContextService, apperrors.AppError) {
+			return clusterContext, nil
+		}
+
+		tokenCreator := &tokenMocks.Creator{}
+		tokenCreator.On("Save", clusterContext).Return(newToken, nil)
+
+		infoHandler := NewCSRInfoHandler(tokenCreator, clusterContextExtractor, infoURL, subjectValues, baseURL)
+
+		req, err := http.NewRequest(http.MethodPost, urlApps, bytes.NewReader(tokenRequestRaw))
+		require.NoError(t, err)
+		rr := httptest.NewRecorder()
+
+		// when
+		infoHandler.GetCSRInfo(rr, req)
+
+		// then
+		responseBody, err := ioutil.ReadAll(rr.Body)
+		require.NoError(t, err)
+
+		var infoResponse csrInfoResponse
+		err = json.Unmarshal(responseBody, &infoResponse)
+		require.NoError(t, err)
+
+		expectedRuntimeCertInfo := certInfo{
+			Subject:      fmt.Sprintf("OU=%s,O=%s,L=%s,ST=%s,C=%s,CN=%s", organizationalUnit, organization, locality, province, country, "test-tenant;test-group"),
+			Extensions:   "",
+			KeyAlgorithm: "rsa2048",
+		}
+
+		receivedContext := infoResponse.ClientIdentity.(map[string]interface{})
+
+		assert.Equal(t, http.StatusOK, rr.Code)
+		assert.Equal(t, expectedSignUrl, infoResponse.CsrURL)
+		assert.EqualValues(t, expectedAPI, infoResponse.API)
+		assert.EqualValues(t, expectedRuntimeCertInfo, infoResponse.CertificateInfo)
+		assert.Equal(t, tenant, receivedContext[tenantKey])
+		assert.Equal(t, group, receivedContext[groupKey])
 	})
 
 	t.Run("should get csr info with empty URLs", func(t *testing.T) {
@@ -162,38 +244,6 @@ func TestCSRInfoHandler_GetCSRInfo(t *testing.T) {
 		assert.EqualValues(t, expectedCertInfo, infoResponse.CertificateInfo)
 	})
 
-	t.Run("should use predefined getInfoURL", func(t *testing.T) {
-		// given
-		predefinedGetInfoURL := "https://predefined.test.cluster.kyma.cx/v1/applications/management/info"
-
-		expectedAPI := api{
-			InfoURL: predefinedGetInfoURL,
-		}
-
-		tokenCreator := &tokenMocks.Creator{}
-		tokenCreator.On("Save", dummyClientContextService).Return(newToken, nil)
-
-		infoHandler := NewCSRInfoHandler(tokenCreator, clientContextService, predefinedGetInfoURL, subjectValues, baseURL)
-
-		req, err := http.NewRequest(http.MethodPost, urlApps, bytes.NewReader(tokenRequestRaw))
-		require.NoError(t, err)
-		rr := httptest.NewRecorder()
-
-		// when
-		infoHandler.GetCSRInfo(rr, req)
-
-		// then
-		responseBody, err := ioutil.ReadAll(rr.Body)
-		require.NoError(t, err)
-
-		var infoResponse csrInfoResponse
-		err = json.Unmarshal(responseBody, &infoResponse)
-		require.NoError(t, err)
-
-		assert.Equal(t, http.StatusOK, rr.Code)
-		assert.EqualValues(t, expectedAPI.InfoURL, infoResponse.API.InfoURL)
-	})
-
 	t.Run("should return 500 when failed to extract context", func(t *testing.T) {
 		// given
 		tokenCreator := &tokenMocks.Creator{}
@@ -228,7 +278,7 @@ func TestCSRInfoHandler_GetCSRInfo(t *testing.T) {
 		tokenCreator := &tokenMocks.Creator{}
 		tokenCreator.On("Save", dummyClientContextService).Return("", apperrors.Internal("error"))
 
-		infoHandler := NewCSRInfoHandler(tokenCreator, clientContextService, infoURL, subjectValues, baseURL)
+		infoHandler := NewCSRInfoHandler(tokenCreator, dummyClientContextExtractor, infoURL, subjectValues, baseURL)
 
 		req, err := http.NewRequest(http.MethodPost, urlApps, bytes.NewReader(tokenRequestRaw))
 		require.NoError(t, err)

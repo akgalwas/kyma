@@ -16,9 +16,10 @@ type certResponse struct {
 }
 
 type csrInfoResponse struct {
-	CsrURL          string   `json:"csrUrl"`
-	API             api      `json:"api"`
-	CertificateInfo certInfo `json:"certificate"`
+	CsrURL          string      `json:"csrUrl"`
+	API             api         `json:"api"`
+	CertificateInfo certInfo    `json:"certificate"`
+	ClientIdentity  interface{} `json:"clientIdentity"`
 }
 
 type mgmtInfoReponse struct {

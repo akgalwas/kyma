@@ -43,19 +43,22 @@ func (ih *csrInfoHandler) GetCSRInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newToken, err := ih.tokenManager.Save(clientContextService)
-
 	if err != nil {
 		httphelpers.RespondWithErrorAndLog(w, err)
 		return
 	}
 
 	apiURLs := ih.makeApiURLs(clientContextService)
-
 	csrURL := ih.makeCSRURLs(newToken)
-
 	certInfo := makeCertInfo(ih.csrSubject, clientContextService.GetCommonName())
 
-	httphelpers.RespondWithBody(w, http.StatusOK, csrInfoResponse{CsrURL: csrURL, API: apiURLs, CertificateInfo: certInfo})
+	response := csrInfoResponse{
+		CsrURL:          csrURL,
+		API:             apiURLs,
+		CertificateInfo: certInfo,
+		ClientIdentity:  clientContextService}
+
+	httphelpers.RespondWithBody(w, http.StatusOK, response)
 }
 
 func (ih *csrInfoHandler) makeCSRURLs(newToken string) string {
