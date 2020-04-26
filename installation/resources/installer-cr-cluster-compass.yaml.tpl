@@ -34,3 +34,6 @@ spec:
       namespace: "kyma-system"
     - name: "logging"
       namespace: "kyma-system"
+    - name: "apiserver-proxy"
+      namespace: "kyma-system"
+
