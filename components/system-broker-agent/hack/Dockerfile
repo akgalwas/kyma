@@ -20,6 +20,6 @@ ENV GO111MODULE=on
 
 RUN go mod vendor
 
-#ENV GO111MODULE=off
+ENV GO111MODULE=off
 
 VOLUME $repo

@@ -18,8 +18,6 @@ docker build -f "${GEN_DIR}/Dockerfile" \
 
 PROJECT_IN_GOPATH="/go/src/${PROJECT_MODULE}"
 
-copy_cmd="cp -r ${PROJECT_IN_GOPATH}/vendor ."
-
 cmd="./generate-groups.sh "deepcopy,client,informer,lister" \
     "$PROJECT_MODULE/pkg/client" \
     "$PROJECT_MODULE/pkg/apis" \
