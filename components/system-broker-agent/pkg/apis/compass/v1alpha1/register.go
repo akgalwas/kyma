@@ -7,7 +7,7 @@ import (
 )
 
 // SchemeGroupVersion is group version used to register these objects
-var SchemeGroupVersion = schema.GroupVersion{Group: "applicationconnector.kyma-project.io", Version: "v1alpha1"}
+var SchemeGroupVersion = schema.GroupVersion{Group: "compass.kyma-project.io", Version: "v1alpha1"}
 
 // Resource takes an unqualified resource and returns a Group qualified GroupResource
 func Resource(resource string) schema.GroupResource {
@@ -28,12 +28,11 @@ func init() {
 	localSchemeBuilder.Register(addKnownTypes)
 }
 
-//
 // Adds the list of known types to api.Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&ClusterSystem{},
-		&ClusterSystemList{},
+		&CompassConnection{},
+		&CompassConnectionList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
