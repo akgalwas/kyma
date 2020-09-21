@@ -33,10 +33,6 @@ spec:
                       type: array
                       items:
                         type: string
-            accessLabel:
-              type: string
-              maxLength: 63
-              pattern: '^([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]$'
             services:
               type: array
               items:
@@ -45,7 +41,6 @@ spec:
                 - "id"
                 - "name"
                 - "displayName"
-                - "providerDisplayName"
                 - "description"
                 - "entries"
                 properties:
@@ -61,8 +56,6 @@ spec:
                     type: string
                   longDescription:
                     type: string
-                  providerDisplayName:
-                    type: string
                   entries:
                     type: array
                     items:
@@ -75,12 +68,6 @@ spec:
                           enum:
                           - "API"
                           - "Events"
-                        gatewayUrl:
-                          type: string
-                        accessLabel:
-                          type: string
-                          maxLength: 63
-                          pattern: '^([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]$'
                         targetUrl:
                           type: string
                         credentials:
@@ -102,7 +89,7 @@ spec:
                               properties:
                                 tokenEndpointURL:
                                   type: string
-                  tags:
-                    type: array
-                    items:
-                      type: string
+            tags:
+              type: array
+              items:
+                type: string
