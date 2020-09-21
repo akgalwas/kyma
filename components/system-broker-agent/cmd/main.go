@@ -13,7 +13,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/log"
 	"github.com/vrischmann/envconfig"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
+	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 )
@@ -28,7 +32,7 @@ func main() {
 
 	// Get a config to talk to the apiserver
 	log.Info("Setting up client for manager")
-	cfg, err := config.GetConfig()
+	cfg, err := getk8sConfig()
 	exitOnError(err, "Failed to set up client config")
 
 	log.Info("Setting up manager")
@@ -103,4 +107,20 @@ func exitOnError(err error, context string) {
 	if err != nil {
 		log.Fatal(errors.Wrap(err, context))
 	}
+}
+
+func getk8sConfig() (*restclient.Config, error) {
+	k8sConfig, err := restclient.InClusterConfig()
+	if err != nil {
+		log.Warnf("Failed to read in cluster config: %s", err.Error())
+		log.Info("Trying to initialize with local config")
+		home := homedir.HomeDir()
+		k8sConfPath := filepath.Join(home, ".kube", "config")
+		k8sConfig, err = clientcmd.BuildConfigFromFlags("", k8sConfPath)
+		if err != nil {
+			return nil, errors.Errorf("failed to read k8s in-cluster configuration, %s", err.Error())
+		}
+	}
+
+	return k8sConfig, nil
 }

@@ -2,7 +2,6 @@ package systembrokerconnection
 
 import (
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/compass"
-
 	"github.com/kyma-project/kyma/components/system-broker-agent/pkg/apis/compass/v1alpha1"
 
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/certificates"
@@ -39,6 +38,7 @@ type compassConnector struct {
 }
 
 func (cc *compassConnector) EstablishConnection(connectorURL, token string) (EstablishedConnection, error) {
+
 	return EstablishedConnection{
 		Credentials:    certificates.Credentials{},
 		ManagementInfo: v1alpha1.ManagementInfo{},

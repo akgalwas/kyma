@@ -173,11 +173,13 @@ func (s *crSupervisor) newCompassConnection() (*v1alpha1.SystemBrokerConnection,
 }
 
 func (s *crSupervisor) establishConnection(connectionCR *v1alpha1.SystemBrokerConnection) {
-	connCfg, err := s.configProvider.GetConnectionConfig()
-	if err != nil {
-		s.setConnectionFailedStatus(connectionCR, err, fmt.Sprintf("Failed to retrieve certificate: %s", err.Error()))
-		return
-	}
+	// TODO: init secrets interface
+	connCfg := config.ConnectionConfig{}
+	//connCfg, err := s.configProvider.GetConnectionConfig()
+	//if err != nil {
+	//	s.setConnectionFailedStatus(connectionCR, err, fmt.Sprintf("Failed to retrieve certificate: %s", err.Error()))
+	//	return
+	//}
 
 	connection, err := s.compassConnector.EstablishConnection(connCfg.ConnectorURL, connCfg.Token)
 	if err != nil {
@@ -187,11 +189,12 @@ func (s *crSupervisor) establishConnection(connectionCR *v1alpha1.SystemBrokerCo
 
 	connectionTime := metav1.Now()
 
-	err = s.credentialsManager.PreserveCredentials(connection.Credentials)
-	if err != nil {
-		s.setConnectionFailedStatus(connectionCR, err, fmt.Sprintf("Failed to preserve certificate: %s", err.Error()))
-		return
-	}
+	// TODO: store credentials
+	//err = s.credentialsManager.PreserveCredentials(connection.Credentials)
+	//if err != nil {
+	//	s.setConnectionFailedStatus(connectionCR, err, fmt.Sprintf("Failed to preserve certificate: %s", err.Error()))
+	//	return
+	//}
 
 	s.log.Infof("Connection established. Director URL: %s , ConnectorURL: %s", connection.ManagementInfo.DirectorURL, connection.ManagementInfo.ConnectorURL)
 

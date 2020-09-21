@@ -37,14 +37,22 @@ type SystemBrokerConnectionStatus struct {
 }
 
 func (in *SystemBrokerConnection) SetCertificateStatus(acquired metav1.Time, certificate *x509.Certificate) {
+
+	// TODO: get cert data from Connector
 	if in.Status.ConnectionStatus == nil {
 		in.Status.ConnectionStatus = &ConnectionStatus{}
 	}
 
+	//in.Status.ConnectionStatus.CertificateStatus = CertificateStatus{
+	//	Acquired:  acquired,
+	//	NotBefore: metav1.NewTime(certificate.NotBefore),
+	//	NotAfter:  metav1.NewTime(certificate.NotAfter),
+	//}
+	now := time.Now()
 	in.Status.ConnectionStatus.CertificateStatus = CertificateStatus{
 		Acquired:  acquired,
-		NotBefore: metav1.NewTime(certificate.NotBefore),
-		NotAfter:  metav1.NewTime(certificate.NotAfter),
+		NotBefore: metav1.NewTime(now),
+		NotAfter:  metav1.NewTime(now.Add(time.Hour * 24 * 30)),
 	}
 }
 
