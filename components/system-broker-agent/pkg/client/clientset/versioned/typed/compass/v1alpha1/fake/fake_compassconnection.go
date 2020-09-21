@@ -19,9 +19,9 @@ type FakeCompassConnections struct {
 	Fake *FakeCompassV1alpha1
 }
 
-var compassconnectionsResource = schema.GroupVersionResource{Group: "compass", Version: "v1alpha1", Resource: "compassconnections"}
+var compassconnectionsResource = schema.GroupVersionResource{Group: "compass.kyma-project.io", Version: "v1alpha1", Resource: "compassconnections"}
 
-var compassconnectionsKind = schema.GroupVersionKind{Group: "compass", Version: "v1alpha1", Kind: "CompassConnection"}
+var compassconnectionsKind = schema.GroupVersionKind{Group: "compass.kyma-project.io", Version: "v1alpha1", Kind: "CompassConnection"}
 
 // Get takes name of the compassConnection, and returns the corresponding compassConnection object, and an error if there is any.
 func (c *FakeCompassConnections) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.CompassConnection, err error) {

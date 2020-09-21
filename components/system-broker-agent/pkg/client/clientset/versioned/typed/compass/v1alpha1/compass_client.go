@@ -13,7 +13,7 @@ type CompassV1alpha1Interface interface {
 	CompassConnectionsGetter
 }
 
-// CompassV1alpha1Client is used to interact with features provided by the compass group.
+// CompassV1alpha1Client is used to interact with features provided by the compass.kyma-project.io group.
 type CompassV1alpha1Client struct {
 	restClient rest.Interface
 }

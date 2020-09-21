@@ -13,7 +13,7 @@ type ApplicationconnectorV1alpha1Interface interface {
 	ClusterSystemsGetter
 }
 
-// ApplicationconnectorV1alpha1Client is used to interact with features provided by the applicationconnector group.
+// ApplicationconnectorV1alpha1Client is used to interact with features provided by the applicationconnector.kyma-project.io group.
 type ApplicationconnectorV1alpha1Client struct {
 	restClient rest.Interface
 }

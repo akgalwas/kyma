@@ -19,9 +19,9 @@ type FakeClusterSystems struct {
 	Fake *FakeApplicationconnectorV1alpha1
 }
 
-var clustersystemsResource = schema.GroupVersionResource{Group: "applicationconnector", Version: "v1alpha1", Resource: "clustersystems"}
+var clustersystemsResource = schema.GroupVersionResource{Group: "applicationconnector.kyma-project.io", Version: "v1alpha1", Resource: "clustersystems"}
 
-var clustersystemsKind = schema.GroupVersionKind{Group: "applicationconnector", Version: "v1alpha1", Kind: "ClusterSystem"}
+var clustersystemsKind = schema.GroupVersionKind{Group: "applicationconnector.kyma-project.io", Version: "v1alpha1", Kind: "ClusterSystem"}
 
 // Get takes name of the clusterSystem, and returns the corresponding clusterSystem object, and an error if there is any.
 func (c *FakeClusterSystems) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterSystem, err error) {
