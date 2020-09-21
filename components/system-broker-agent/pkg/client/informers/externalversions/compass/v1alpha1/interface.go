@@ -8,8 +8,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
-	// CompassConnections returns a CompassConnectionInformer.
-	CompassConnections() CompassConnectionInformer
+	// SystemBrokerConnections returns a SystemBrokerConnectionInformer.
+	SystemBrokerConnections() SystemBrokerConnectionInformer
 }
 
 type version struct {
@@ -23,7 +23,7 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// CompassConnections returns a CompassConnectionInformer.
-func (v *version) CompassConnections() CompassConnectionInformer {
-	return &compassConnectionInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+// SystemBrokerConnections returns a SystemBrokerConnectionInformer.
+func (v *version) SystemBrokerConnections() SystemBrokerConnectionInformer {
+	return &systemBrokerConnectionInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

@@ -10,7 +10,7 @@ import (
 
 type CompassV1alpha1Interface interface {
 	RESTClient() rest.Interface
-	CompassConnectionsGetter
+	SystemBrokerConnectionsGetter
 }
 
 // CompassV1alpha1Client is used to interact with features provided by the compass.kyma-project.io group.
@@ -18,8 +18,8 @@ type CompassV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *CompassV1alpha1Client) CompassConnections() CompassConnectionInterface {
-	return newCompassConnections(c)
+func (c *CompassV1alpha1Client) SystemBrokerConnections() SystemBrokerConnectionInterface {
+	return newSystemBrokerConnections(c)
 }
 
 // NewForConfig creates a new CompassV1alpha1Client for the given config.

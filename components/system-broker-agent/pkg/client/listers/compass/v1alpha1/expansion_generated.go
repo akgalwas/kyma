@@ -2,6 +2,6 @@
 
 package v1alpha1
 
-// CompassConnectionListerExpansion allows custom methods to be added to
-// CompassConnectionLister.
-type CompassConnectionListerExpansion interface{}
+// SystemBrokerConnectionListerExpansion allows custom methods to be added to
+// SystemBrokerConnectionLister.
+type SystemBrokerConnectionListerExpansion interface{}

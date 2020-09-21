@@ -12,8 +12,8 @@ type FakeCompassV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeCompassV1alpha1) CompassConnections() v1alpha1.CompassConnectionInterface {
-	return &FakeCompassConnections{c}
+func (c *FakeCompassV1alpha1) SystemBrokerConnections() v1alpha1.SystemBrokerConnectionInterface {
+	return &FakeSystemBrokerConnections{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

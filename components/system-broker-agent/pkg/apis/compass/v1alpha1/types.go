@@ -11,31 +11,32 @@ import (
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type CompassConnection struct {
+type SystemBrokerConnection struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              CompassConnectionSpec   `json:"spec"`
-	Status            CompassConnectionStatus `json:"status,omitempty"`
+	Spec              SystemBrokerConnectionSpec   `json:"spec"`
+	Status            SystemBrokerConnectionStatus `json:"status,omitempty"`
 }
 
-type CompassConnectionSpec struct {
+type SystemBrokerConnectionSpec struct {
 	ManagementInfo        ManagementInfo `json:"managementInfo"`
 	ResyncNow             bool           `json:"resyncNow,omitempty"`
 	RefreshCredentialsNow bool           `json:"refreshCredentialsNow,omitempty"`
 }
 
 type ManagementInfo struct {
+	// TODO: Connector should return url to System Broker
 	DirectorURL  string `json:"directorUrl"`
 	ConnectorURL string `json:"connectorUrl"`
 }
 
-type CompassConnectionStatus struct {
+type SystemBrokerConnectionStatus struct {
 	State                 ConnectionState        `json:"connectionState"`
 	ConnectionStatus      *ConnectionStatus      `json:"connectionStatus"`
 	SynchronizationStatus *SynchronizationStatus `json:"synchronizationStatus"`
 }
 
-func (in *CompassConnection) SetCertificateStatus(acquired metav1.Time, certificate *x509.Certificate) {
+func (in *SystemBrokerConnection) SetCertificateStatus(acquired metav1.Time, certificate *x509.Certificate) {
 	if in.Status.ConnectionStatus == nil {
 		in.Status.ConnectionStatus = &ConnectionStatus{}
 	}
@@ -47,11 +48,11 @@ func (in *CompassConnection) SetCertificateStatus(acquired metav1.Time, certific
 	}
 }
 
-func (in CompassConnection) ShouldAttemptReconnect() bool {
+func (in SystemBrokerConnection) ShouldAttemptReconnect() bool {
 	return in.Status.State == ConnectionFailed
 }
 
-func (in CompassConnection) ShouldRenewCertificate(certValidityRenewalThreshold float64, minimalSyncTime time.Duration) bool {
+func (in SystemBrokerConnection) ShouldRenewCertificate(certValidityRenewalThreshold float64, minimalSyncTime time.Duration) bool {
 	if in.Spec.RefreshCredentialsNow {
 		return true
 	}
@@ -66,7 +67,7 @@ func (in CompassConnection) ShouldRenewCertificate(certValidityRenewalThreshold 
 	return timeLeft < float64(certValidity)*certValidityRenewalThreshold || timeLeft < 2*minimalSyncTime.Seconds()
 }
 
-func (s CompassConnectionStatus) String() string {
+func (s SystemBrokerConnectionStatus) String() string {
 	// TODO: return more detailed status
 	return string(s.State)
 }
@@ -98,11 +99,11 @@ const (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type CompassConnectionList struct {
+type SystemBrokerConnectionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 
-	Items []CompassConnection `json:"items"`
+	Items []SystemBrokerConnection `json:"items"`
 }
 
 // ConnectionStatus represents status of a connection to Compass
