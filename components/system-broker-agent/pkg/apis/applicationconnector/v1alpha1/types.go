@@ -117,5 +117,5 @@ type ClusterSystemList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 
-	Items []Application `json:"items"`
+	Items []ClusterSystem `json:"items"`
 }
