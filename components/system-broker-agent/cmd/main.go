@@ -8,6 +8,7 @@ import (
 	confProvider "github.com/kyma-project/kyma/components/system-broker-agent/internal/config"
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/graphql"
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/secrets"
+	"github.com/kyma-project/kyma/components/system-broker-agent/internal/synchronization/osbapi"
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/systembrokerconnection"
 	apis "github.com/kyma-project/kyma/components/system-broker-agent/pkg/apis/compass/v1alpha1"
 	"github.com/pkg/errors"
@@ -24,6 +25,11 @@ import (
 
 func main() {
 	fmt.Println("Starting System Broker Agent")
+
+	// <AG>
+	testCatalog()
+	// <AG>
+
 	var options Config
 	err := envconfig.InitWithPrefix(&options, "APP")
 	exitOnError(err, "Failed to process environment variables")
@@ -100,6 +106,27 @@ func main() {
 	log.Info("Starting the Cmd.")
 	err = mgr.Start(signals.SetupSignalHandler())
 	exitOnError(err, "Failed to run the manager")
+
+}
+
+func testCatalog() {
+	client, err := osbapi.NewClient("https://compass-gateway.cmp-test.dev.kyma.cloud.sap/broker")
+	if err != nil {
+		fmt.Println("Failed to init Service Catalog client")
+	}
+
+	services, err := client.GetCatalog()
+	if err != nil {
+		fmt.Println("Failed to get catalog")
+	}
+
+	for _, service := range services {
+		fmt.Println(service.Name)
+
+		for _, plan := range service.Plans {
+			fmt.Println(plan.Name)
+		}
+	}
 
 }
 

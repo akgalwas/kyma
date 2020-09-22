@@ -20,9 +20,11 @@ require (
 	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/utils v0.0.0-20200912215256-4140de9c8800 // indirect
 	sigs.k8s.io/controller-runtime v0.6.2
+	sigs.k8s.io/go-open-service-broker-client/v2 v2.0.0-20200911103215-9787cad28392
 )
 
 replace (
 	golang.org/x/text => golang.org/x/text v0.3.3
 	k8s.io/client-go => k8s.io/client-go v0.18.8
+	sigs.k8s.io/go-open-service-broker-client/v2 => github.com/akgalwas/go-open-service-broker-client/v2 v2.0.0-20200922100536-4abe37b54695
 )
