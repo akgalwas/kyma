@@ -64,7 +64,7 @@ func toService(plan osb.Plan) v1alpha1.Service {
 
 func toEntries(metadata []map[string]interface{}) []v1alpha1.Entry {
 
-	entries := make([]v1alpha1.Entry, len(metadata))
+	entries := make([]v1alpha1.Entry, 0)
 	for _, item := range metadata {
 		definitionID := item["definition_id"].(string)                   // APIDefinition.ID or EventDefinition.ID
 		definitionName := item["definition_name"].(string)               // APIDefinition.Name or EventDefinition.Name

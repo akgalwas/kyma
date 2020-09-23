@@ -39,9 +39,8 @@ func main() {
 	cfg, err := getk8sConfig()
 	exitOnError(err, "Failed to set up client config")
 
-	// <AG>
-	testSynchronizer(cfg)
-	// <AG>
+	synchronizer, err := createSynchronizer(cfg)
+	exitOnError(err, "Failed to create synchronizer")
 
 	log.Info("Setting up manager")
 	mgr, err := manager.New(cfg, manager.Options{SyncPeriod: &options.ControllerSyncPeriod})
@@ -96,6 +95,7 @@ func main() {
 		ConnectionDataCache:          connectionDataCache,
 		CertValidityRenewalThreshold: options.CertValidityRenewalThreshold,
 		MinimalCompassSyncTime:       options.MinimalCompassSyncTime,
+		Synchronizer:                 synchronizer,
 	}
 
 	compassConnectionSupervisor, err := controllerDependencies.InitializeController()
@@ -109,45 +109,6 @@ func main() {
 	err = mgr.Start(signals.SetupSignalHandler())
 	exitOnError(err, "Failed to run the manager")
 
-}
-
-func testCatalog() {
-	client, err := osbapi.NewClient("https://compass-gateway.cmp-test.dev.kyma.cloud.sap/broker")
-	if err != nil {
-		fmt.Println("Failed to init Service Catalog client")
-	}
-
-	services, err := client.GetCatalog()
-	if err != nil {
-		fmt.Println("Failed to get catalog")
-	}
-
-	for _, service := range services {
-		fmt.Println(service.Name)
-
-		for _, plan := range service.Plans {
-			fmt.Println(plan.Name)
-		}
-	}
-
-}
-
-func testSynchronizer(restConfig *restclient.Config) {
-	synchronizer, err := createSynchronizer(restConfig)
-	if err != nil {
-		fmt.Printf("Error %s /n", err)
-		return
-	}
-
-	results, err := synchronizer.Do()
-	if err != nil {
-		fmt.Printf("Error %s /n", err)
-		return
-	}
-
-	for _, result := range results {
-		fmt.Println(result.ServiceClassName)
-	}
 }
 
 func createSynchronizer(restConfig *restclient.Config) (synchronization.Synchronizer, error) {

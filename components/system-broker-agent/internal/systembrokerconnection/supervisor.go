@@ -3,6 +3,7 @@ package systembrokerconnection
 import (
 	"context"
 	"fmt"
+	"github.com/kyma-project/kyma/components/system-broker-agent/internal/synchronization"
 	"time"
 
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/compass/cache"
@@ -46,6 +47,7 @@ func NewSupervisor(
 	certValidityRenewalThreshold float64,
 	minimalCompassSyncTime time.Duration,
 	connectionDataCache cache.ConnectionDataCache,
+	synchronizer synchronization.Synchronizer,
 ) Supervisor {
 	return &crSupervisor{
 		compassConnector:             connector,
@@ -55,6 +57,7 @@ func NewSupervisor(
 		certValidityRenewalThreshold: certValidityRenewalThreshold,
 		minimalCompassSyncTime:       minimalCompassSyncTime,
 		connectionDataCache:          connectionDataCache,
+		synchronizer:                 synchronizer,
 		log:                          logrus.WithField("Supervisor", "CompassConnection"),
 	}
 }
@@ -68,6 +71,7 @@ type crSupervisor struct {
 	minimalCompassSyncTime       time.Duration
 	log                          *logrus.Entry
 	connectionDataCache          cache.ConnectionDataCache
+	synchronizer                 synchronization.Synchronizer
 }
 
 func (s *crSupervisor) InitializeCompassConnection() (*v1alpha1.SystemBrokerConnection, error) {
@@ -101,11 +105,38 @@ func (s *crSupervisor) InitializeCompassConnection() (*v1alpha1.SystemBrokerConn
 
 	s.establishConnection(compassConnectionCR)
 
-	return s.updateCompassConnection(compassConnectionCR)
+	return s.updateSystemBrokerConnection(compassConnectionCR)
 }
 
 func (s *crSupervisor) SynchronizeWithSystemBroker(connection *v1alpha1.SystemBrokerConnection) (*v1alpha1.SystemBrokerConnection, error) {
-	return &v1alpha1.SystemBrokerConnection{}, nil
+	syncAttemptTime := metav1.Now()
+
+	results, err := s.synchronizer.Do()
+	if err != nil {
+		connection.Status.State = v1alpha1.ResourceApplicationFailed
+		connection.Status.SynchronizationStatus = &v1alpha1.SynchronizationStatus{
+			LastAttempt:         syncAttemptTime,
+			LastSuccessfulFetch: syncAttemptTime,
+			Error:               fmt.Sprintf("Failed to apply configuration: %s", err.Error()),
+		}
+		return s.updateSystemBrokerConnection(connection)
+	}
+
+	// TODO: save result to CR and possibly log in better manner
+	s.log.Infof("Config application results: ")
+	for _, res := range results {
+		s.log.Info(res)
+	}
+
+	s.log.Infof("Setting System Broker Connection to Synchronized state")
+	connection.Status.State = v1alpha1.Synchronized
+	connection.Status.SynchronizationStatus = &v1alpha1.SynchronizationStatus{
+		LastAttempt:               syncAttemptTime,
+		LastSuccessfulFetch:       syncAttemptTime,
+		LastSuccessfulApplication: syncAttemptTime,
+	}
+
+	return s.updateSystemBrokerConnection(connection)
 }
 
 func (s *crSupervisor) maintainCompassConnection(compassConnection *v1alpha1.SystemBrokerConnection) error {
@@ -247,7 +278,7 @@ func (s *crSupervisor) setConnectionMaintenanceFailedStatus(connectionCR *v1alph
 	connectionCR.Status.ConnectionStatus.Error = errorMsg
 }
 
-func (s *crSupervisor) updateCompassConnection(connectionCR *v1alpha1.SystemBrokerConnection) (*v1alpha1.SystemBrokerConnection, error) {
+func (s *crSupervisor) updateSystemBrokerConnection(connectionCR *v1alpha1.SystemBrokerConnection) (*v1alpha1.SystemBrokerConnection, error) {
 	// TODO: with retries
 
 	return s.crManager.Update(context.Background(), connectionCR, v1.UpdateOptions{})

@@ -107,17 +107,75 @@ func (s synchronizer) createClusterSystem(service osb.Service) Result {
 }
 
 func (s synchronizer) deleteClusterSystems(services []osb.Service, clusterSystems []v1alpha1.ClusterSystem) []Result {
+
+	results := make([]Result, 0)
+	for _, clusterSystem := range clusterSystems {
+		if !serviceClassExists(clusterSystem.Name, services) {
+			results = append(results, s.deleteClusterSystem(clusterSystem))
+		}
+	}
+
 	return nil
 }
 
+func (s synchronizer) deleteClusterSystem(clusterSystem v1alpha1.ClusterSystem) Result {
+	var appErr apperrors.AppError
+
+	err := s.clusterSystemClient.Delete(context.Background(), clusterSystem.Name, metav1.DeleteOptions{})
+	if err != nil {
+		appErr = apperrors.Internal("failed to delete Cluster System %s: %s", clusterSystem.Name, err.Error())
+	}
+
+	return Result{
+		ServiceClassName: clusterSystem.Name,
+		Operation:        Create,
+		Error:            appErr,
+	}
+}
+
 func (s synchronizer) updateClusterSystems(services []osb.Service, clusterSystems []v1alpha1.ClusterSystem) []Result {
-	return nil
+	results := make([]Result, 0)
+	for _, service := range services {
+		if clusterSystemExists(service.Name, clusterSystems) {
+			results = append(results, s.createClusterSystem(service))
+		}
+	}
+
+	return results
+}
+
+func (s synchronizer) updateClusterSystem(service osb.Service) Result {
+	clusterSystem := toClusterSystem(service)
+
+	var appErr apperrors.AppError
+	_, err := s.clusterSystemClient.Update(context.Background(), &clusterSystem, metav1.UpdateOptions{})
+
+	if err != nil {
+		appErr = apperrors.Internal("failed to create Cluster System %s: %s", service.Name, err.Error())
+	}
+
+	return Result{
+		ServiceClassName: service.Name,
+		ServiceClassID:   service.ID,
+		Operation:        Create,
+		Error:            appErr,
+	}
 }
 
 func clusterSystemExists(name string, clusterSystems []v1alpha1.ClusterSystem) bool {
 
 	for _, clusterSystem := range clusterSystems {
 		if clusterSystem.Name == name {
+			return true
+		}
+	}
+
+	return false
+}
+
+func serviceClassExists(name string, services []osb.Service) bool {
+	for _, service := range services {
+		if service.Name == name {
 			return true
 		}
 	}

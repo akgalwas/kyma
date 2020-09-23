@@ -3,6 +3,7 @@ package systembrokerconnection
 import (
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/compass"
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/config"
+	"github.com/kyma-project/kyma/components/system-broker-agent/internal/synchronization"
 	"time"
 
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/compass/cache"
@@ -29,6 +30,8 @@ type DependencyConfig struct {
 	MinimalCompassSyncTime       time.Duration
 
 	ClientsProvider compass.ClientsProvider
+
+	Synchronizer synchronization.Synchronizer
 }
 
 func (config DependencyConfig) InitializeController() (Supervisor, error) {
@@ -48,7 +51,8 @@ func (config DependencyConfig) InitializeController() (Supervisor, error) {
 		config.ConfigProvider,
 		config.CertValidityRenewalThreshold,
 		config.MinimalCompassSyncTime,
-		config.ConnectionDataCache)
+		config.ConnectionDataCache,
+		config.Synchronizer)
 
 	if err := InitCompassConnectionController(config.ControllerManager, connectionSupervisor, config.MinimalCompassSyncTime); err != nil {
 		return nil, errors.Wrap(err, "Unable to register controllers to the manager")
