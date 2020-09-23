@@ -49,9 +49,10 @@ type ClusterSystemSpec struct {
 	SkipInstallation bool              `json:"skipInstallation,omitempty"`
 	Services         []Service         `json:"services"`
 	Labels           map[string]string `json:"labels"`
-	Tenant           string            `json:"tenant,omitempty"`
-	Group            string            `json:"group,omitempty"`
-	CompassMetadata  *CompassMetadata  `json:"compassMetadata,omitempty"`
+	// TODO: Do we really need Tenant and group? It seems to be related to C4 Hana Cockpit
+	Tenant          string           `json:"tenant,omitempty"`
+	Group           string           `json:"group,omitempty"`
+	CompassMetadata *CompassMetadata `json:"compassMetadata,omitempty"`
 
 	// New fields used by V2 version TODO - remove this comment
 

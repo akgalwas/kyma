@@ -6,17 +6,17 @@ import (
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/synchronization/osbapi"
 	"github.com/kyma-project/kyma/components/system-broker-agent/pkg/apis/applicationconnector/v1alpha1"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	osb "sigs.k8s.io/go-open-service-broker-client/v2"
 )
 
 //go:generate mockery --name=CRManager
 type ClusterSystemCRManager interface {
-	Create(ctx context.Context, cc *v1alpha1.ClusterSystem, options v1.CreateOptions) (*v1alpha1.ClusterSystem, error)
-	Update(ctx context.Context, cc *v1alpha1.ClusterSystem, options v1.UpdateOptions) (*v1alpha1.ClusterSystem, error)
-	Delete(ctx context.Context, name string, options v1.DeleteOptions) error
-	Get(ctx context.Context, name string, options v1.GetOptions) (*v1alpha1.ClusterSystem, error)
-	List(opts v1.ListOptions) (*v1alpha1.ClusterSystemList, error)
+	Create(ctx context.Context, cc *v1alpha1.ClusterSystem, options metav1.CreateOptions) (*v1alpha1.ClusterSystem, error)
+	Update(ctx context.Context, cc *v1alpha1.ClusterSystem, options metav1.UpdateOptions) (*v1alpha1.ClusterSystem, error)
+	Delete(ctx context.Context, name string, options metav1.DeleteOptions) error
+	Get(ctx context.Context, name string, options metav1.GetOptions) (*v1alpha1.ClusterSystem, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.ClusterSystemList, error)
 }
 
 type synchronizer struct {
@@ -33,10 +33,10 @@ const (
 )
 
 type Result struct {
-	ApplicationName string
-	ApplicationID   string
-	Operation       Operation
-	Error           apperrors.AppError
+	ServiceClassName string
+	ServiceClassID   string
+	Operation        Operation
+	Error            apperrors.AppError
 }
 
 type Synchronizer interface {
@@ -59,7 +59,7 @@ func (s synchronizer) Do() ([]Result, error) {
 		return nil, errors.Wrap(err, "failed to fetch OSB API Services")
 	}
 
-	clusterSystemList, err := s.clusterSystemClient.List(v1.ListOptions{})
+	clusterSystemList, err := s.clusterSystemClient.List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch ClusterSystems")
 	}
@@ -77,7 +77,33 @@ func (s synchronizer) Do() ([]Result, error) {
 }
 
 func (s synchronizer) createClusterSystems(services []osb.Service, clusterSystems []v1alpha1.ClusterSystem) []Result {
-	return nil
+
+	results := make([]Result, 0)
+	for _, service := range services {
+		if !clusterSystemExists(service.Name, clusterSystems) {
+			results = append(results, s.createClusterSystem(service))
+		}
+	}
+
+	return results
+}
+
+func (s synchronizer) createClusterSystem(service osb.Service) Result {
+	clusterSystem := toClusterSystem(service)
+
+	var appErr apperrors.AppError
+	_, err := s.clusterSystemClient.Create(context.Background(), &clusterSystem, metav1.CreateOptions{})
+
+	if err != nil {
+		appErr = apperrors.Internal("failed to create Cluster System %s: %s", service.Name, err.Error())
+	}
+
+	return Result{
+		ServiceClassName: service.Name,
+		ServiceClassID:   service.ID,
+		Operation:        Create,
+		Error:            appErr,
+	}
 }
 
 func (s synchronizer) deleteClusterSystems(services []osb.Service, clusterSystems []v1alpha1.ClusterSystem) []Result {
@@ -86,4 +112,15 @@ func (s synchronizer) deleteClusterSystems(services []osb.Service, clusterSystem
 
 func (s synchronizer) updateClusterSystems(services []osb.Service, clusterSystems []v1alpha1.ClusterSystem) []Result {
 	return nil
+}
+
+func clusterSystemExists(name string, clusterSystems []v1alpha1.ClusterSystem) bool {
+
+	for _, clusterSystem := range clusterSystems {
+		if clusterSystem.Name == name {
+			return true
+		}
+	}
+
+	return false
 }

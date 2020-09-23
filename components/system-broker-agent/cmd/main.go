@@ -8,9 +8,11 @@ import (
 	confProvider "github.com/kyma-project/kyma/components/system-broker-agent/internal/config"
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/graphql"
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/secrets"
+	"github.com/kyma-project/kyma/components/system-broker-agent/internal/synchronization"
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/synchronization/osbapi"
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/systembrokerconnection"
 	apis "github.com/kyma-project/kyma/components/system-broker-agent/pkg/apis/compass/v1alpha1"
+	"github.com/kyma-project/kyma/components/system-broker-agent/pkg/clientcs/clientset/versioned/typed/applicationconnector/v1alpha1"
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/log"
 	"github.com/vrischmann/envconfig"
@@ -26,10 +28,6 @@ import (
 func main() {
 	fmt.Println("Starting System Broker Agent")
 
-	// <AG>
-	testCatalog()
-	// <AG>
-
 	var options Config
 	err := envconfig.InitWithPrefix(&options, "APP")
 	exitOnError(err, "Failed to process environment variables")
@@ -40,6 +38,10 @@ func main() {
 	log.Info("Setting up client for manager")
 	cfg, err := getk8sConfig()
 	exitOnError(err, "Failed to set up client config")
+
+	// <AG>
+	testSynchronizer(cfg)
+	// <AG>
 
 	log.Info("Setting up manager")
 	mgr, err := manager.New(cfg, manager.Options{SyncPeriod: &options.ControllerSyncPeriod})
@@ -128,6 +130,40 @@ func testCatalog() {
 		}
 	}
 
+}
+
+func testSynchronizer(restConfig *restclient.Config) {
+	synchronizer, err := createSynchronizer(restConfig)
+	if err != nil {
+		fmt.Printf("Error %s /n", err)
+		return
+	}
+
+	results, err := synchronizer.Do()
+	if err != nil {
+		fmt.Printf("Error %s /n", err)
+		return
+	}
+
+	for _, result := range results {
+		fmt.Println(result.ServiceClassName)
+	}
+}
+
+func createSynchronizer(restConfig *restclient.Config) (synchronization.Synchronizer, error) {
+	osbAPIClient, err := osbapi.NewClient("https://compass-gateway.cmp-test.dev.kyma.cloud.sap/broker")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to init OSB API client")
+	}
+
+	crClient, err := v1alpha1.NewForConfig(restConfig)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to init Cluster System client")
+	}
+
+	synchronizer := synchronization.New(osbAPIClient, crClient.ClusterSystems())
+
+	return synchronizer, nil
 }
 
 func exitOnError(err error, context string) {

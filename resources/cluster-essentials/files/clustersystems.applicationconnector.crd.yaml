@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     "helm.sh/resource-policy": keep
-  name: applications.applicationconnector.kyma-project.io
+  name: clustersystems.applicationconnector.kyma-project.io
 spec:
   group: applicationconnector.kyma-project.io
   version: v1alpha1
