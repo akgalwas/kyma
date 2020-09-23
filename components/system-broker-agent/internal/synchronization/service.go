@@ -137,7 +137,7 @@ func (s synchronizer) updateClusterSystems(services []osb.Service, clusterSystem
 	results := make([]Result, 0)
 	for _, service := range services {
 		if clusterSystemExists(service.Name, clusterSystems) {
-			results = append(results, s.createClusterSystem(service))
+			results = append(results, s.updateClusterSystem(service))
 		}
 	}
 
@@ -151,7 +151,7 @@ func (s synchronizer) updateClusterSystem(service osb.Service) Result {
 	_, err := s.clusterSystemClient.Update(context.Background(), &clusterSystem, metav1.UpdateOptions{})
 
 	if err != nil {
-		appErr = apperrors.Internal("failed to create Cluster System %s: %s", service.Name, err.Error())
+		appErr = apperrors.Internal("failed to update Cluster System %s: %s", service.Name, err.Error())
 	}
 
 	return Result{
