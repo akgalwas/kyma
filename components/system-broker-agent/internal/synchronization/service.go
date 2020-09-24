@@ -147,9 +147,20 @@ func (s synchronizer) updateClusterSystems(services []osb.Service, clusterSystem
 func (s synchronizer) updateClusterSystem(service osb.Service) Result {
 	clusterSystem := toClusterSystem(service)
 
-	var appErr apperrors.AppError
-	_, err := s.clusterSystemClient.Update(context.Background(), &clusterSystem, metav1.UpdateOptions{})
+	currentClusterSystem, err := s.clusterSystemClient.Get(context.Background(), service.Name, metav1.GetOptions{})
+	if err != nil {
+		return Result{
+			ServiceClassName: service.Name,
+			ServiceClassID:   service.ID,
+			Operation:        Update,
+			Error:            apperrors.Internal("failed to get Cluster System %s: %s", service.Name, err.Error()),
+		}
+	}
 
+	currentClusterSystem.Spec.Services = clusterSystem.Spec.Services
+
+	var appErr apperrors.AppError
+	_, err = s.clusterSystemClient.Update(context.Background(), currentClusterSystem, metav1.UpdateOptions{})
 	if err != nil {
 		appErr = apperrors.Internal("failed to update Cluster System %s: %s", service.Name, err.Error())
 	}
@@ -157,7 +168,7 @@ func (s synchronizer) updateClusterSystem(service osb.Service) Result {
 	return Result{
 		ServiceClassName: service.Name,
 		ServiceClassID:   service.ID,
-		Operation:        Create,
+		Operation:        Update,
 		Error:            appErr,
 	}
 }

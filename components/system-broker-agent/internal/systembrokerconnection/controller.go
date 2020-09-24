@@ -67,28 +67,28 @@ func newReconciler(client Client, supervisior Supervisor, minimalConfigSyncTime 
 
 // Reconcile reads that state of the cluster for a CompassConnection object and makes changes based on the state read
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	log := r.log.WithField("CompassConnection", request.Name)
+	log := r.log.WithField("SystemBrokerConnection", request.Name)
 
 	// Fetch the CompassConnection instance
 	instance := &v1alpha1.SystemBrokerConnection{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("Compass Connection deleted. Trying to initialize new connection...")
+			log.Info("System Broker Connection deleted. Trying to initialize new connection...")
 
 			// Try to establish new connection
 			instance, err := r.supervisor.InitializeCompassConnection()
 			if err != nil {
-				log.Errorf("Failed to initialize Compass Connection: %s", err.Error())
+				log.Errorf("Failed to initialize System Broker Connection: %s", err.Error())
 				return reconcile.Result{}, err
 			}
 
-			log.Infof("Attempt to initialize Compass Connection ended with status: %s", instance.Status)
+			log.Infof("Attempt to initialize System Broker Connection ended with status: %s", instance.Status)
 			return reconcile.Result{}, nil
 		}
 
 		// SynchronizationFailed reading the object - requeue the request.
-		log.Info("Failed to read Compass Connection.")
+		log.Info("Failed to read System Broker Connection.")
 		return reconcile.Result{}, err
 	}
 
@@ -96,14 +96,14 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	// If connection is not established read Config Map and try to fetch Certificate
 	if instance.ShouldAttemptReconnect() {
-		log.Infof("Attempting to initialize connection with Compass...")
+		log.Infof("Attempting to initialize connection with System Broker...")
 		instance, err := r.supervisor.InitializeCompassConnection()
 		if err != nil {
 			log.Errorf("Failed to initialize Compass Connection: %s", err.Error())
 			return reconcile.Result{}, err
 		}
 
-		log.Infof("Attempt to initialize Compass Connection ended with status: %s", instance.Status)
+		log.Infof("Attempt to initialize System Broker Connection ended with status: %s", instance.Status)
 		return reconcile.Result{}, nil
 	}
 
@@ -113,16 +113,16 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	log.Info("Trying to connect to Compass and apply Runtime configuration...")
+	log.Info("Trying to connect to System Broker and apply Runtime configuration...")
 
 	// Fetch and apply configuration
 	synchronized, err := r.supervisor.SynchronizeWithSystemBroker(instance)
 	if err != nil {
-		log.Errorf("Failed to synchronize with Compass: %s", err.Error())
+		log.Errorf("Failed to synchronize with System Broker: %s", err.Error())
 		return reconcile.Result{}, err
 	}
 
-	log.Infof("Synchronization finished. Compass Connection status: %s", synchronized.Status)
+	log.Infof("Synchronization finished. System Broker Connection status: %s", synchronized.Status)
 
 	return reconcile.Result{}, nil
 }

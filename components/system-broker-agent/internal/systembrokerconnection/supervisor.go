@@ -2,6 +2,7 @@ package systembrokerconnection
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/synchronization"
 	"time"
@@ -81,21 +82,22 @@ func (s *crSupervisor) InitializeCompassConnection() (*v1alpha1.SystemBrokerConn
 			return s.newCompassConnection()
 		}
 
-		return nil, errors.Wrap(err, "Connection failed while getting existing Compass Connection")
+		return nil, errors.Wrap(err, "Connection failed while getting existing System Broker Connection")
 	}
 
-	s.log.Infof("Compass Connection exists with state %s", compassConnectionCR.Status.State)
+	s.log.Infof("System Broker Connection exists with state %s", compassConnectionCR.Status.State)
 
 	if !compassConnectionCR.ShouldAttemptReconnect() {
-		s.log.Infof("Connection already initialized, skipping ")
+		s.log.Infof("System Broker Connection already initialized, skipping ")
 
-		credentials, err := s.credentialsManager.GetClientCredentials()
-		if err != nil {
-			return nil, fmt.Errorf("failed to read credentials while initializing Compass Connection CR: %s", err.Error())
-		}
+		//credentials, err := s.credentialsManager.GetClientCredentials()
+		//if err != nil {
+		//	return nil, fmt.Errorf("failed to read credentials while initializing Compass Connection CR: %s", err.Error())
+		//}
 
 		s.connectionDataCache.UpdateConnectionData(
-			credentials.AsTLSCertificate(),
+			//credentials.AsTLSCertificate(),
+			tls.Certificate{},
 			compassConnectionCR.Spec.ManagementInfo.DirectorURL,
 			compassConnectionCR.Spec.ManagementInfo.ConnectorURL,
 		)
