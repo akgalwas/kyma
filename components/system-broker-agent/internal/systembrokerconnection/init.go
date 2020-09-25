@@ -14,7 +14,7 @@ import (
 
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/certificates"
 
-	"github.com/kyma-project/kyma/components/system-broker-agent/pkg/client/clientset/versioned/typed/compass/v1alpha1"
+	"github.com/kyma-project/kyma/components/system-broker-agent/pkg/client/compass/clientset/versioned/typed/compass/v1alpha1"
 	"k8s.io/client-go/rest"
 )
 

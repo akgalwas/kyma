@@ -19,7 +19,7 @@ docker build -f "${GEN_DIR}/Dockerfile" \
 PROJECT_IN_GOPATH="/go/src/${PROJECT_MODULE}"
 
 cmd="./generate-groups.sh "deepcopy,client,informer,lister" \
-    "$PROJECT_MODULE/pkg/clientcs" \
+    "$PROJECT_MODULE/pkg/client/$CUSTOM_RESOURCE_GROUP_DIR" \
     "$PROJECT_MODULE/pkg/apis" \
     $CUSTOM_RESOURCE_GROUP_DIR:$CUSTOM_RESOURCE_VERSION \
     --go-header-file ${PROJECT_IN_GOPATH}/hack/boilerplate.go.txt"

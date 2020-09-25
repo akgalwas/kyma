@@ -12,7 +12,7 @@ import (
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/synchronization/osbapi"
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/systembrokerconnection"
 	apis "github.com/kyma-project/kyma/components/system-broker-agent/pkg/apis/compass/v1alpha1"
-	"github.com/kyma-project/kyma/components/system-broker-agent/pkg/clientcs/clientset/versioned/typed/applicationconnector/v1alpha1"
+	"github.com/kyma-project/kyma/components/system-broker-agent/pkg/client/applicationconnector/clientset/versioned/typed/applicationconnector/v1alpha1"
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/log"
 	"github.com/vrischmann/envconfig"

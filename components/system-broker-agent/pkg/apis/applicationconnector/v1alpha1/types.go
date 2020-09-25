@@ -49,10 +49,7 @@ type ClusterSystemSpec struct {
 	SkipInstallation bool              `json:"skipInstallation,omitempty"`
 	Services         []Service         `json:"services"`
 	Labels           map[string]string `json:"labels"`
-	// TODO: Do we really need Tenant and group? It seems to be related to C4 Hana Cockpit
-	Tenant          string           `json:"tenant,omitempty"`
-	Group           string           `json:"group,omitempty"`
-	CompassMetadata *CompassMetadata `json:"compassMetadata,omitempty"`
+	CompassMetadata  *CompassMetadata  `json:"compassMetadata,omitempty"`
 
 	// New fields used by V2 version TODO - remove this comment
 
@@ -98,7 +95,6 @@ type Credentials struct {
 }
 
 // Service represents part of the remote environment, which is mapped 1 to 1 in the service-catalog to:
-// - service class in V1
 // - service plans in V2 (since api-packages support)
 type Service struct {
 	ID          string  `json:"id"`
