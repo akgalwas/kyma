@@ -65,7 +65,7 @@ type CompassMetadata struct {
 }
 
 type Authentication struct {
-	ClientIds []string `json:"clientIds"`
+	SystemAuthID []string `json:"systemAuthIds"`
 }
 
 // Entry defines, what is enabled by activating the service.
