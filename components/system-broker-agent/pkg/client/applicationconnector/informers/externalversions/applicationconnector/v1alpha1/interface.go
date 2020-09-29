@@ -10,6 +10,8 @@ import (
 type Interface interface {
 	// ClusterSystems returns a ClusterSystemInformer.
 	ClusterSystems() ClusterSystemInformer
+	// SystemMappings returns a SystemMappingInformer.
+	SystemMappings() SystemMappingInformer
 }
 
 type version struct {
@@ -26,4 +28,9 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // ClusterSystems returns a ClusterSystemInformer.
 func (v *version) ClusterSystems() ClusterSystemInformer {
 	return &clusterSystemInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// SystemMappings returns a SystemMappingInformer.
+func (v *version) SystemMappings() SystemMappingInformer {
+	return &systemMappingInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

@@ -16,6 +16,10 @@ func (c *FakeApplicationconnectorV1alpha1) ClusterSystems() v1alpha1.ClusterSyst
 	return &FakeClusterSystems{c}
 }
 
+func (c *FakeApplicationconnectorV1alpha1) SystemMappings(namespace string) v1alpha1.SystemMappingInterface {
+	return &FakeSystemMappings{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeApplicationconnectorV1alpha1) RESTClient() rest.Interface {

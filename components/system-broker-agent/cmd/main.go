@@ -11,6 +11,7 @@ import (
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/synchronization"
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/synchronization/osbapi"
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/systembrokerconnection"
+	"github.com/kyma-project/kyma/components/system-broker-agent/internal/systemmapping"
 	apis "github.com/kyma-project/kyma/components/system-broker-agent/pkg/apis/compass/v1alpha1"
 	"github.com/kyma-project/kyma/components/system-broker-agent/pkg/client/applicationconnector/clientset/versioned/typed/applicationconnector/v1alpha1"
 	"github.com/pkg/errors"
@@ -99,11 +100,14 @@ func main() {
 	}
 
 	compassConnectionSupervisor, err := controllerDependencies.InitializeController()
-	exitOnError(err, "Failed to initialize Controller")
+	exitOnError(err, "Failed to initialize CompassConnection Controller")
 
 	log.Infoln("Initializing Compass Connection CR")
 	_, err = compassConnectionSupervisor.InitializeCompassConnection()
 	exitOnError(err, "Failed to initialize Compass Connection CR")
+
+	err = systemmapping.NewControllerManagedBy(mgr)
+	exitOnError(err, "Failed to initialize SystemMapping Controller")
 
 	log.Info("Starting the Cmd.")
 	err = mgr.Start(signals.SetupSignalHandler())

@@ -11,6 +11,7 @@ import (
 type ApplicationconnectorV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	ClusterSystemsGetter
+	SystemMappingsGetter
 }
 
 // ApplicationconnectorV1alpha1Client is used to interact with features provided by the applicationconnector.kyma-project.io group.
@@ -20,6 +21,10 @@ type ApplicationconnectorV1alpha1Client struct {
 
 func (c *ApplicationconnectorV1alpha1Client) ClusterSystems() ClusterSystemInterface {
 	return newClusterSystems(c)
+}
+
+func (c *ApplicationconnectorV1alpha1Client) SystemMappings(namespace string) SystemMappingInterface {
+	return newSystemMappings(c, namespace)
 }
 
 // NewForConfig creates a new ApplicationconnectorV1alpha1Client for the given config.

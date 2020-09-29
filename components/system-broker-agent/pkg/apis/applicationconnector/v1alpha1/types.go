@@ -116,3 +116,26 @@ type ClusterSystemList struct {
 
 	Items []ClusterSystem `json:"items"`
 }
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type SystemMapping struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata"`
+	Spec              SystemMappingSpec `json:"spec"`
+}
+
+type SystemMappingSpec struct {
+	SystemID   string   `json:"systemId"`
+	ServiceIDs []string `json:"serviceIds,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type SystemMappingList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []SystemMapping `json:"items"`
+}

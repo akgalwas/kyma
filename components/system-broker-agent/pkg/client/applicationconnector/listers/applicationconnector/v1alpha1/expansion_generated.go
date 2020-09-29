@@ -5,3 +5,11 @@ package v1alpha1
 // ClusterSystemListerExpansion allows custom methods to be added to
 // ClusterSystemLister.
 type ClusterSystemListerExpansion interface{}
+
+// SystemMappingListerExpansion allows custom methods to be added to
+// SystemMappingLister.
+type SystemMappingListerExpansion interface{}
+
+// SystemMappingNamespaceListerExpansion allows custom methods to be added to
+// SystemMappingNamespaceLister.
+type SystemMappingNamespaceListerExpansion interface{}

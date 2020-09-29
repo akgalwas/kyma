@@ -1,0 +1,35 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: systemmappings.applicationconnector.kyma-project.io
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  group: applicationconnector.kyma-project.io
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    plural: systemmappings
+    singular: systemmapping
+    kind: SystemMapping
+    shortNames:
+      - sm
+  validation:
+    openAPIV3Schema:
+      description: SystemMapping mapps a ClusterSystem ID to the given Namespace.
+      properties:
+        metadata:
+          type: object
+        spec:
+          description: Specification of the System Mapping.
+          type: object
+          required:
+            - "systemId"
+          properties:
+            systemId:
+              type: string
+            serviceIds:
+              properties:
+                type: array
+                items:
+                  type: string
