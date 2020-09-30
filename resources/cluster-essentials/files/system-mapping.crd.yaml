@@ -16,7 +16,7 @@ spec:
       - sm
   validation:
     openAPIV3Schema:
-      description: SystemMapping mapps a ClusterSystem ID to the given Namespace.
+      description: SystemMapping mapps a ClusterSystem's services' IDs to the given Namespace.
       properties:
         metadata:
           type: object
@@ -24,12 +24,9 @@ spec:
           description: Specification of the System Mapping.
           type: object
           required:
-            - "systemId"
+            - "serviceIds"
           properties:
-            systemId:
-              type: string
             serviceIds:
-              properties:
-                type: array
-                items:
-                  type: string
+              type: array
+              items:
+                type: string

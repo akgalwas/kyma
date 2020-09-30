@@ -12,7 +12,8 @@ import (
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/synchronization/osbapi"
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/systembrokerconnection"
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/systemmapping"
-	apis "github.com/kyma-project/kyma/components/system-broker-agent/pkg/apis/compass/v1alpha1"
+	applicationconnectorv1alpha1 "github.com/kyma-project/kyma/components/system-broker-agent/pkg/apis/applicationconnector/v1alpha1"
+	compassv1alpha1 "github.com/kyma-project/kyma/components/system-broker-agent/pkg/apis/compass/v1alpha1"
 	"github.com/kyma-project/kyma/components/system-broker-agent/pkg/client/applicationconnector/clientset/versioned/typed/applicationconnector/v1alpha1"
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/log"
@@ -49,8 +50,10 @@ func main() {
 
 	// Setup Scheme for all resources
 	log.Info("Setting up scheme")
-	err = apis.AddToScheme(mgr.GetScheme())
-	exitOnError(err, "Failed to add APIs to scheme")
+	err = compassv1alpha1.AddToScheme(mgr.GetScheme())
+	exitOnError(err, "Failed to add Compass APIs to scheme")
+	err = applicationconnectorv1alpha1.AddToScheme(mgr.GetScheme())
+	exitOnError(err, "Failed to add ApplicationConnector APIs to scheme")
 
 	log.Info("Registering Components.")
 

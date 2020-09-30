@@ -126,9 +126,12 @@ type SystemMapping struct {
 	Spec              SystemMappingSpec `json:"spec"`
 }
 
+func (sm *SystemMapping) GetObjectKind() schema.ObjectKind {
+	return &SystemMapping{}
+}
+
 type SystemMappingSpec struct {
-	SystemID   string   `json:"systemId"`
-	ServiceIDs []string `json:"serviceIds,omitempty"`
+	ServiceIDs []string `json:"serviceIds"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
