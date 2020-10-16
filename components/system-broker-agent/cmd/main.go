@@ -41,8 +41,13 @@ func main() {
 	cfg, err := getk8sConfig()
 	exitOnError(err, "Failed to set up client config")
 
-	synchronizer, err := createSynchronizer(cfg)
-	exitOnError(err, "Failed to create synchronizer")
+	osbApiClient, err := createOsbApiClient()
+	exitOnError(err, "Failed to create OSB API Client")
+
+	crClient, err := createCrClient(cfg)
+	exitOnError(err, "Failed to create CR Client")
+
+	synchronizer := createSynchronizer(cfg, crClient, osbApiClient)
 
 	log.Info("Setting up manager")
 	mgr, err := manager.New(cfg, manager.Options{SyncPeriod: &options.ControllerSyncPeriod})
@@ -109,7 +114,7 @@ func main() {
 	_, err = compassConnectionSupervisor.InitializeCompassConnection()
 	exitOnError(err, "Failed to initialize Compass Connection CR")
 
-	err = systemmapping.NewControllerManagedBy(mgr)
+	err = systemmapping.NewControllerManagedBy(mgr, crClient.ClusterSystems(), osbApiClient)
 	exitOnError(err, "Failed to initialize SystemMapping Controller")
 
 	log.Info("Starting the Cmd.")
@@ -118,20 +123,24 @@ func main() {
 
 }
 
-func createSynchronizer(restConfig *restclient.Config) (synchronization.Synchronizer, error) {
+func createOsbApiClient() (osbapi.Client, error) {
 	osbAPIClient, err := osbapi.NewClient("https://compass-gateway.cmp-test.dev.kyma.cloud.sap/broker")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init OSB API client")
 	}
+	return osbAPIClient, nil
+}
 
+func createCrClient(restConfig *restclient.Config) (*v1alpha1.ApplicationconnectorV1alpha1Client, error) {
 	crClient, err := v1alpha1.NewForConfig(restConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init Cluster System client")
 	}
+	return crClient, nil
+}
 
-	synchronizer := synchronization.New(osbAPIClient, crClient.ClusterSystems())
-
-	return synchronizer, nil
+func createSynchronizer(restConfig *restclient.Config, crClient *v1alpha1.ApplicationconnectorV1alpha1Client, osbAPIClient osbapi.Client) synchronization.Synchronizer {
+	return synchronization.New(osbAPIClient, crClient.ClusterSystems())
 }
 
 func exitOnError(err error, context string) {

@@ -5,6 +5,7 @@ go 1.14
 require (
 	cloud.google.com/go v0.51.0 // indirect
 	github.com/Azure/go-autorest/autorest v0.9.6 // indirect
+	github.com/google/uuid v1.1.1
 	github.com/kyma-incubator/compass v0.0.0-20200921061826-9f8cc0e16f01
 	github.com/kyma-project/kyma/components/application-operator v0.0.0-20200818080816-8c81ea09adc7
 	github.com/kyma-project/kyma/components/compass-runtime-agent v0.0.0-20200918054249-2504ff067c2b // indirect

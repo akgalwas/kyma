@@ -24,9 +24,16 @@ spec:
           description: Specification of the System Mapping.
           type: object
           required:
-            - "serviceIds"
+            - "services"
           properties:
-            serviceIds:
+            services:
               type: array
               items:
-                type: string
+                type: object
+                required:
+                  - "planId"
+                properties:
+                  planId:
+                    type: string
+                  instanceId:
+                    type: string

@@ -2,34 +2,48 @@ package systemmapping
 
 import (
 	"context"
+	"fmt"
+	"github.com/google/uuid"
+	"github.com/kyma-project/kyma/components/system-broker-agent/internal/synchronization/osbapi"
 	v1alpha12 "github.com/kyma-project/kyma/components/system-broker-agent/pkg/apis/applicationconnector/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	osb "sigs.k8s.io/go-open-service-broker-client/v2"
 )
 
-func NewControllerManagedBy(mgr manager.Manager) error {
+//go:generate mockery --name=CRManager
+type ClusterSystemCRManager interface {
+	Get(ctx context.Context, name string, options metav1.GetOptions) (*v1alpha12.ClusterSystem, error)
+}
+
+func NewControllerManagedBy(mgr manager.Manager, csClient ClusterSystemCRManager, osbApiClient osbapi.Client) error {
 	return ctrl.
 		NewControllerManagedBy(mgr).
 		For(&v1alpha12.SystemMapping{}).
 		Complete(&reconciler{
-			client: mgr.GetClient(),
-			log:    logrus.WithField("Controller", "SystemMapping"),
+			ctrlClient:   mgr.GetClient(),
+			csClient:     csClient,
+			osbApiClient: osbApiClient,
+			log:          logrus.WithField("Controller", "SystemMapping"),
 		})
 }
 
 type reconciler struct {
-	client client.Client
-	log    *logrus.Entry
+	ctrlClient   ctrlClient.Client
+	csClient     ClusterSystemCRManager
+	osbApiClient osbapi.Client
+	log          *logrus.Entry
 }
 
 func (r *reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	r.log.Infof("Reconciling SystemMapping %s...", req.NamespacedName)
 
 	systemMapping := &v1alpha12.SystemMapping{}
-	if err := r.client.Get(context.Background(), req.NamespacedName, systemMapping); err != nil {
+	if err := r.ctrlClient.Get(context.Background(), req.NamespacedName, systemMapping); err != nil {
 		if errors.IsNotFound(err) {
 			r.log.Infof("SystemMapping is deleted. Deleting the ServiceInstances...")
 			if err := r.deleteServiceInstances(systemMapping); err != nil {
@@ -74,33 +88,79 @@ func (r *reconciler) deleteServiceInstances(systemMapping *v1alpha12.SystemMappi
 
 func (r *reconciler) whichServiceInstancesAreNotProperlyCreated(systemMapping *v1alpha12.SystemMapping) ([]string, error) {
 	var serviceInstancesToCreate []string
-	for _, serviceID := range systemMapping.Spec.ServiceIDs {
-		ok, err := r.isServiceInstanceProperlyCreated(serviceID)
+	for _, serviceMeta := range systemMapping.Spec.Services {
+		ok, err := r.isServiceInstanceProperlyCreated(serviceMeta)
 		if err != nil {
 			return nil, err
 		}
 		if !ok {
-			serviceInstancesToCreate = append(serviceInstancesToCreate, serviceID)
+			serviceInstancesToCreate = append(serviceInstancesToCreate, serviceMeta.PlanID)
 		}
 	}
 	return serviceInstancesToCreate, nil
 }
 
-func (r *reconciler) isServiceInstanceProperlyCreated(serviceID string) (bool, error) {
+func (r *reconciler) isServiceInstanceProperlyCreated(serviceMeta v1alpha12.ServiceMeta) (bool, error) {
 	// TODO: Check if ServiceInstance is properly created
 	return false, nil
 }
 
 func (r *reconciler) createServiceInstances(systemMapping *v1alpha12.SystemMapping, serviceInstancesToCreate []string) error {
 	for _, serviceInstanceToCreate := range serviceInstancesToCreate {
-		if err := r.createServiceInstance(serviceInstanceToCreate); err != nil {
+		if err := r.createServiceInstance(systemMapping, serviceInstanceToCreate); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (r *reconciler) createServiceInstance(serviceInstanceToCreate string) error {
-	// TODO: Create ServiceInstance
+func (r *reconciler) createServiceInstance(systemMapping *v1alpha12.SystemMapping, servicePlanID string) error {
+	serviceServiceID, err := r.getClusterSystemApplicationID(systemMapping.Name)
+	if err != nil {
+		return err
+	}
+
+	serviceInstanceID := uuid.New().String()
+
+	provisionRequest := &osb.ProvisionRequest{
+		InstanceID:       serviceInstanceID,
+		ServiceID:        serviceServiceID,
+		PlanID:           servicePlanID,
+		OrganizationGUID: "organization_guid",
+		SpaceGUID:        "space_guid",
+	}
+	if err := r.osbApiClient.ProvisionInstance(provisionRequest); err != nil {
+		return err
+	}
+
+	if err := r.updateSystemMappingWithServiceInstance(systemMapping, servicePlanID, serviceInstanceID); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (r *reconciler) getClusterSystemApplicationID(clusterSystemName string) (string, error) {
+	clusterSystem, err := r.csClient.Get(context.Background(), clusterSystemName, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	if clusterSystem.Spec.CompassMetadata == nil {
+		return "", fmt.Errorf("cluster system %s has no compass metadata", clusterSystem.Name)
+	}
+	return clusterSystem.Spec.CompassMetadata.ApplicationID, nil
+}
+
+func (r *reconciler) updateSystemMappingWithServiceInstance(systemMapping *v1alpha12.SystemMapping, servicePlanID, serviceInstanceID string) error {
+	updatedServiceMetasCounter := 0
+	for _, serviceMeta := range systemMapping.Spec.Services {
+		if serviceMeta.PlanID == servicePlanID {
+			serviceMeta.InstanceId = &serviceInstanceID
+			updatedServiceMetasCounter++
+		}
+	}
+	if updatedServiceMetasCounter != 1 {
+		return fmt.Errorf("updating system mapping malformed")
+	}
+	return r.ctrlClient.Update(context.Background(), systemMapping)
 }

@@ -12,6 +12,7 @@ type client struct {
 
 type Client interface {
 	GetCatalog() ([]osb.Service, error)
+	ProvisionInstance(*osb.ProvisionRequest) error
 }
 
 func NewClient(url string) (Client, error) {
@@ -43,4 +44,12 @@ func (c client) GetCatalog() ([]osb.Service, error) {
 	}
 
 	return response.Services, nil
+}
+
+func (c client) ProvisionInstance(provisionRequest *osb.ProvisionRequest) error {
+	_, err := c.osbAPIClient.ProvisionInstance(provisionRequest)
+	if err != nil {
+		return errors.Wrap(err, "failed to provision service instance in System Broker")
+	}
+	return nil
 }
