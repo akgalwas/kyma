@@ -13,6 +13,8 @@ type client struct {
 type Client interface {
 	GetCatalog() ([]osb.Service, error)
 	ProvisionInstance(*osb.ProvisionRequest) error
+	InstanceExists(serviceID string) (bool, error)
+	DeprovisionInstance(serviceID, planID, instanceID string) error
 }
 
 func NewClient(url string) (Client, error) {
@@ -52,4 +54,38 @@ func (c client) ProvisionInstance(provisionRequest *osb.ProvisionRequest) error 
 		return errors.Wrap(err, "failed to provision service instance in System Broker")
 	}
 	return nil
+}
+
+func (c client) DeprovisionInstance(serviceID, planID, instanceID string) error {
+	deprovisioningRequest := osb.DeprovisionRequest{
+		ServiceID:         serviceID,
+		PlanID:            planID,
+		InstanceID:        instanceID,
+		AcceptsIncomplete: true,
+	}
+	_, err := c.osbAPIClient.DeprovisionInstance(&deprovisioningRequest)
+	if err != nil {
+		return errors.Wrap(err, "failed to provision service instance in System Broker")
+	}
+	return nil
+}
+
+func (c client) InstanceExists(instanceID string) (bool, error) {
+	request := osb.GetInstanceRequest{
+		InstanceID: instanceID,
+	}
+	_, err := c.osbAPIClient.GetInstance(&request)
+	if err != nil {
+		httpErr, ok := osb.IsHTTPError(err)
+		if ok {
+			if httpErr.StatusCode == http.StatusNotFound {
+				return false, nil
+			}
+
+			return false, err
+		}
+		return false, err
+	}
+
+	return true, nil
 }

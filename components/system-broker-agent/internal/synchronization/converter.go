@@ -30,6 +30,9 @@ func toClusterSystem(service osb.Service) v1alpha1.ClusterSystem {
 		},
 		Spec: v1alpha1.ClusterSystemSpec{
 			Services: clusterServices,
+			CompassMetadata: &v1alpha1.CompassMetadata{
+				ApplicationID: service.ID,
+			},
 		},
 	}
 }

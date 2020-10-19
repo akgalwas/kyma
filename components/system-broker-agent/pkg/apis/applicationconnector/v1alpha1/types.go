@@ -60,8 +60,7 @@ type ClusterSystemSpec struct {
 }
 
 type CompassMetadata struct {
-	ApplicationID  string         `json:"applicationId"`
-	Authentication Authentication `json:"authentication"`
+	ApplicationID string `json:"applicationId"`
 }
 
 type Authentication struct {
