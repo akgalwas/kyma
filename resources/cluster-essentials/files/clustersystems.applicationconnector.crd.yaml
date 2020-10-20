@@ -21,8 +21,6 @@ spec:
           properties:
             compassMetadata:
               type: object
-              required:
-              - "authentication"
               properties:
                 authentication:
                   type: object

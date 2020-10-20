@@ -1,7 +1,6 @@
 package osbapi
 
 import (
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"net/http"
 	osb "sigs.k8s.io/go-open-service-broker-client/v2"
@@ -14,7 +13,7 @@ type client struct {
 type Client interface {
 	GetCatalog() ([]osb.Service, error)
 	ProvisionInstance(serviceID, planID, instanceID string) error
-	InstanceExists(serviceID string) (bool, error)
+	InstanceExists(serviceID *string) (bool, error)
 	DeprovisionInstance(serviceID, planID, instanceID string) error
 	Unbind(serviceID, planID, instanceID, bindingID string) error
 	Bind(serviceID, planID, instanceID, bindingID string) (map[string]interface{}, error)
@@ -52,14 +51,13 @@ func (c client) GetCatalog() ([]osb.Service, error) {
 }
 
 func (c client) ProvisionInstance(serviceID, planID, instanceID string) error {
-	serviceInstanceID := uuid.New().String()
-
 	provisionRequest := &osb.ProvisionRequest{
-		InstanceID:       serviceInstanceID,
-		ServiceID:        serviceID,
-		PlanID:           planID,
-		OrganizationGUID: "organization_guid",
-		SpaceGUID:        "space_guid",
+		InstanceID:        instanceID,
+		ServiceID:         serviceID,
+		PlanID:            planID,
+		OrganizationGUID:  "organization_guid",
+		SpaceGUID:         "space_guid",
+		AcceptsIncomplete: true,
 	}
 
 	_, err := c.osbAPIClient.ProvisionInstance(provisionRequest)
@@ -132,9 +130,13 @@ func (c client) DeprovisionInstance(serviceID, planID, instanceID string) error 
 	return nil
 }
 
-func (c client) InstanceExists(instanceID string) (bool, error) {
+func (c client) InstanceExists(instanceID *string) (bool, error) {
+	if instanceID == nil {
+		return false, nil
+	}
+
 	request := osb.GetInstanceRequest{
-		InstanceID: instanceID,
+		InstanceID: *instanceID,
 	}
 	_, err := c.osbAPIClient.GetInstance(&request)
 

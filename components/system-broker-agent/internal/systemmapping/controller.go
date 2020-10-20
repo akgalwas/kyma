@@ -71,7 +71,11 @@ func (r *reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			return ctrl.Result{}, err
 		}
 
-		removeFinalizer(systemMapping, FinalizerName)
+		err = r.removeFinalizer(systemMapping, FinalizerName)
+		if err != nil {
+			r.log.Errorf("Failed to remove finalizer: %v", err)
+			return ctrl.Result{}, err
+		}
 	}
 
 	r.log.Infof("Reconciliation of SystemMapping %s finished successfully", req.NamespacedName)
@@ -88,7 +92,7 @@ func hasFinalizer(systemMapping *v1alpha12.SystemMapping, finalizer string) bool
 	return false
 }
 
-func removeFinalizer(systemMapping *v1alpha12.SystemMapping, finalizer string) {
+func (r *reconciler) removeFinalizer(systemMapping *v1alpha12.SystemMapping, finalizer string) error {
 	finalizers := make([]string, 0)
 	for _, f := range systemMapping.ObjectMeta.Finalizers {
 		if f == finalizer {
@@ -98,6 +102,8 @@ func removeFinalizer(systemMapping *v1alpha12.SystemMapping, finalizer string) {
 	}
 
 	systemMapping.Finalizers = finalizers
+
+	return r.ctrlClient.Update(context.Background(), systemMapping)
 }
 
 func (r *reconciler) unbindAndDeleteServiceInstances(systemMapping *v1alpha12.SystemMapping) error {
@@ -135,11 +141,11 @@ func (r *reconciler) createAndBindServiceInstances(systemMapping *v1alpha12.Syst
 func (r *reconciler) getServiceInstancesToCreate(systemMapping *v1alpha12.SystemMapping) ([]string, error) {
 	var serviceInstancesToCreate []string
 	for _, serviceMeta := range systemMapping.Spec.Services {
-		ok, err := r.osbApiClient.InstanceExists(*serviceMeta.InstanceID)
+		exists, err := r.osbApiClient.InstanceExists(serviceMeta.InstanceID)
 		if err != nil {
 			return nil, err
 		}
-		if !ok {
+		if !exists {
 			serviceInstancesToCreate = append(serviceInstancesToCreate, serviceMeta.PlanID)
 		}
 	}
@@ -184,10 +190,14 @@ func (r *reconciler) getClusterSystemApplicationID(clusterSystemName string) (st
 
 func (r *reconciler) updateSystemMapping(systemMapping *v1alpha12.SystemMapping, servicePlanID, serviceInstanceID string, bindingID string) error {
 	updatedServiceMetasCounter := 0
-	for _, serviceMeta := range systemMapping.Spec.Services {
-		if serviceMeta.PlanID == servicePlanID {
-			serviceMeta.InstanceID = &serviceInstanceID
-			serviceMeta.BindingID = &bindingID
+	for i, service := range systemMapping.Spec.Services {
+		if service.PlanID == servicePlanID {
+			newService := service
+			newService.InstanceID = &serviceInstanceID
+			newService.BindingID = &bindingID
+
+			systemMapping.Spec.Services[i] = newService
+
 			updatedServiceMetasCounter++
 		}
 	}

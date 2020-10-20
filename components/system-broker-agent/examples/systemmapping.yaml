@@ -1,0 +1,7 @@
+apiVersion: applicationconnector.kyma-project.io/v1alpha1
+kind: SystemMapping
+metadata:
+  name: commerce-mock-fbbdcf54
+spec:
+  services:
+    - planId: fd24d678-7af8-49fa-bf13-a0e36c6b1270
