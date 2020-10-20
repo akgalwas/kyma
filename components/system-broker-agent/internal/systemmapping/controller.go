@@ -11,10 +11,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	osb "sigs.k8s.io/go-open-service-broker-client/v2"
 )
 
-const FinalizerName = "myfinalizer"
+const FinalizerName = "service-instance-finalizer"
 
 //go:generate mockery --name=CRManager
 type ClusterSystemCRManager interface {
@@ -50,18 +49,23 @@ func (r *reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	if systemMapping.ObjectMeta.DeletionTimestamp.IsZero() {
-		systemMapping.ObjectMeta.Finalizers = append(systemMapping.ObjectMeta.Finalizers, FinalizerName)
-		if err := r.ctrlClient.Update(context.Background(), systemMapping); err != nil {
-			r.log.Errorf("Failed to update SystemMapping: %v", err)
-			return ctrl.Result{}, err
-		}
+		r.log.Infof("Processing SystemMapping %s creation", req.NamespacedName)
+		if !hasFinalizer(systemMapping, FinalizerName) {
+			r.log.Infof("Adding SystemMapping %s finalizer", req.NamespacedName)
+			systemMapping.ObjectMeta.Finalizers = append(systemMapping.ObjectMeta.Finalizers, FinalizerName)
+			if err := r.ctrlClient.Update(context.Background(), systemMapping); err != nil {
+				r.log.Errorf("Failed to add finalizer: %v", err)
+				return ctrl.Result{}, err
+			}
 
-		if err := r.createServiceInstances(systemMapping); err != nil {
-			r.log.Errorf("Failed to create service instances: %v", err)
-			return ctrl.Result{}, err
+			r.log.Infof("Creating ServiceInstances for SystemMapping %s", req.NamespacedName)
+			if err := r.createAndBindServiceInstances(systemMapping); err != nil {
+				r.log.Errorf("Failed to create service instances: %v", err)
+				return ctrl.Result{}, err
+			}
 		}
 	} else {
-		err := r.deleteServiceInstances(systemMapping)
+		err := r.unbindAndDeleteServiceInstances(systemMapping)
 		if err != nil {
 			r.log.Errorf("Failed to delete service instances: %v", err)
 			return ctrl.Result{}, err
@@ -72,6 +76,16 @@ func (r *reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	r.log.Infof("Reconciliation of SystemMapping %s finished successfully", req.NamespacedName)
 	return ctrl.Result{}, nil
+}
+
+func hasFinalizer(systemMapping *v1alpha12.SystemMapping, finalizer string) bool {
+	for _, f := range systemMapping.ObjectMeta.Finalizers {
+		if f == finalizer {
+			return true
+		}
+	}
+
+	return false
 }
 
 func removeFinalizer(systemMapping *v1alpha12.SystemMapping, finalizer string) {
@@ -86,33 +100,42 @@ func removeFinalizer(systemMapping *v1alpha12.SystemMapping, finalizer string) {
 	systemMapping.Finalizers = finalizers
 }
 
-func (r *reconciler) deleteServiceInstances(systemMapping *v1alpha12.SystemMapping) error {
-
-	return nil
-}
-
-func (r *reconciler) createServiceInstances(systemMapping *v1alpha12.SystemMapping) error {
-	serviceInstancesToCreate, err := r.getServiceInstancesToCreate(systemMapping)
+func (r *reconciler) unbindAndDeleteServiceInstances(systemMapping *v1alpha12.SystemMapping) error {
+	serviceID, err := r.getClusterSystemApplicationID(systemMapping.Name)
 	if err != nil {
 		return err
 	}
 
-	for _, serviceInstanceToCreate := range serviceInstancesToCreate {
-		if err := r.createServiceInstance(systemMapping, serviceInstanceToCreate); err != nil {
+	for _, service := range systemMapping.Spec.Services {
+		if service.BindingID != nil {
+			r.osbApiClient.Unbind(serviceID, service.PlanID, *service.InstanceID, *service.BindingID)
+		}
+
+		if service.InstanceID != nil {
+			r.osbApiClient.DeprovisionInstance(serviceID, service.PlanID, *service.InstanceID)
+		}
+	}
+	return nil
+}
+
+func (r *reconciler) createAndBindServiceInstances(systemMapping *v1alpha12.SystemMapping) error {
+	serviceInstances, err := r.getServiceInstancesToCreate(systemMapping)
+	if err != nil {
+		return err
+	}
+
+	for _, serviceInstanceToCreate := range serviceInstances {
+		if err := r.createAndBindServiceInstance(systemMapping, serviceInstanceToCreate); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (r *reconciler) isServiceInstanceCreated(serviceMeta v1alpha12.ServiceMeta) (bool, error) {
-	return r.osbApiClient.InstanceExists(*serviceMeta.InstanceId)
-}
-
 func (r *reconciler) getServiceInstancesToCreate(systemMapping *v1alpha12.SystemMapping) ([]string, error) {
 	var serviceInstancesToCreate []string
 	for _, serviceMeta := range systemMapping.Spec.Services {
-		ok, err := r.isServiceInstanceCreated(serviceMeta)
+		ok, err := r.osbApiClient.InstanceExists(*serviceMeta.InstanceID)
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +146,7 @@ func (r *reconciler) getServiceInstancesToCreate(systemMapping *v1alpha12.System
 	return serviceInstancesToCreate, nil
 }
 
-func (r *reconciler) createServiceInstance(systemMapping *v1alpha12.SystemMapping, servicePlanID string) error {
+func (r *reconciler) createAndBindServiceInstance(systemMapping *v1alpha12.SystemMapping, servicePlanID string) error {
 	serviceServiceID, err := r.getClusterSystemApplicationID(systemMapping.Name)
 	if err != nil {
 		return err
@@ -131,18 +154,17 @@ func (r *reconciler) createServiceInstance(systemMapping *v1alpha12.SystemMappin
 
 	serviceInstanceID := uuid.New().String()
 
-	provisionRequest := &osb.ProvisionRequest{
-		InstanceID:       serviceInstanceID,
-		ServiceID:        serviceServiceID,
-		PlanID:           servicePlanID,
-		OrganizationGUID: "organization_guid",
-		SpaceGUID:        "space_guid",
-	}
-	if err := r.osbApiClient.ProvisionInstance(provisionRequest); err != nil {
+	if err := r.osbApiClient.ProvisionInstance(serviceServiceID, servicePlanID, serviceInstanceID); err != nil {
 		return err
 	}
 
-	if err := r.updateSystemMappingWithServiceInstance(systemMapping, servicePlanID, serviceInstanceID); err != nil {
+	bindingID := uuid.New().String()
+	// TODO: use credentials to create a secret
+	if _, err := r.osbApiClient.Bind(serviceServiceID, servicePlanID, serviceInstanceID, bindingID); err != nil {
+		return err
+	}
+
+	if err := r.updateSystemMapping(systemMapping, servicePlanID, serviceInstanceID, bindingID); err != nil {
 		return err
 	}
 
@@ -160,11 +182,12 @@ func (r *reconciler) getClusterSystemApplicationID(clusterSystemName string) (st
 	return clusterSystem.Spec.CompassMetadata.ApplicationID, nil
 }
 
-func (r *reconciler) updateSystemMappingWithServiceInstance(systemMapping *v1alpha12.SystemMapping, servicePlanID, serviceInstanceID string) error {
+func (r *reconciler) updateSystemMapping(systemMapping *v1alpha12.SystemMapping, servicePlanID, serviceInstanceID string, bindingID string) error {
 	updatedServiceMetasCounter := 0
 	for _, serviceMeta := range systemMapping.Spec.Services {
 		if serviceMeta.PlanID == servicePlanID {
-			serviceMeta.InstanceId = &serviceInstanceID
+			serviceMeta.InstanceID = &serviceInstanceID
+			serviceMeta.BindingID = &bindingID
 			updatedServiceMetasCounter++
 		}
 	}

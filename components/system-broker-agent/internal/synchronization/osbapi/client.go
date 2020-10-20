@@ -1,6 +1,7 @@
 package osbapi
 
 import (
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"net/http"
 	osb "sigs.k8s.io/go-open-service-broker-client/v2"
@@ -12,9 +13,11 @@ type client struct {
 
 type Client interface {
 	GetCatalog() ([]osb.Service, error)
-	ProvisionInstance(*osb.ProvisionRequest) error
+	ProvisionInstance(serviceID, planID, instanceID string) error
 	InstanceExists(serviceID string) (bool, error)
 	DeprovisionInstance(serviceID, planID, instanceID string) error
+	Unbind(serviceID, planID, instanceID, bindingID string) error
+	Bind(serviceID, planID, instanceID, bindingID string) (map[string]interface{}, error)
 }
 
 func NewClient(url string) (Client, error) {
@@ -48,11 +51,61 @@ func (c client) GetCatalog() ([]osb.Service, error) {
 	return response.Services, nil
 }
 
-func (c client) ProvisionInstance(provisionRequest *osb.ProvisionRequest) error {
+func (c client) ProvisionInstance(serviceID, planID, instanceID string) error {
+	serviceInstanceID := uuid.New().String()
+
+	provisionRequest := &osb.ProvisionRequest{
+		InstanceID:       serviceInstanceID,
+		ServiceID:        serviceID,
+		PlanID:           planID,
+		OrganizationGUID: "organization_guid",
+		SpaceGUID:        "space_guid",
+	}
+
 	_, err := c.osbAPIClient.ProvisionInstance(provisionRequest)
 	if err != nil {
 		return errors.Wrap(err, "failed to provision service instance in System Broker")
 	}
+	return nil
+}
+
+func (c client) Bind(serviceID, planID, instanceID, bindingID string) (map[string]interface{}, error) {
+	bindRequest := osb.BindRequest{
+		ServiceID:  serviceID,
+		PlanID:     planID,
+		InstanceID: instanceID,
+		BindingID:  bindingID,
+	}
+
+	res, err := c.osbAPIClient.Bind(&bindRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return res.Credentials, nil
+}
+
+func (c client) Unbind(serviceID, planID, instanceID, bindingID string) error {
+	unbindRequest := osb.UnbindRequest{
+		ServiceID:  serviceID,
+		PlanID:     planID,
+		InstanceID: instanceID,
+		BindingID:  bindingID,
+	}
+
+	_, err := c.osbAPIClient.Unbind(&unbindRequest)
+
+	if err != nil {
+		isHttpError, httpErr := asHTTPError(err)
+		if isHttpError {
+			if httpErr.StatusCode == http.StatusGone {
+				return nil
+			}
+		}
+
+		return err
+	}
+
 	return nil
 }
 
@@ -64,9 +117,18 @@ func (c client) DeprovisionInstance(serviceID, planID, instanceID string) error 
 		AcceptsIncomplete: true,
 	}
 	_, err := c.osbAPIClient.DeprovisionInstance(&deprovisioningRequest)
+
 	if err != nil {
-		return errors.Wrap(err, "failed to provision service instance in System Broker")
+		isHttpError, httpErr := asHTTPError(err)
+		if isHttpError {
+			if httpErr.StatusCode == http.StatusGone {
+				return nil
+			}
+		}
+
+		return err
 	}
+
 	return nil
 }
 
@@ -75,17 +137,29 @@ func (c client) InstanceExists(instanceID string) (bool, error) {
 		InstanceID: instanceID,
 	}
 	_, err := c.osbAPIClient.GetInstance(&request)
+
 	if err != nil {
-		httpErr, ok := osb.IsHTTPError(err)
-		if ok {
+		isHttpError, httpErr := asHTTPError(err)
+		if isHttpError {
 			if httpErr.StatusCode == http.StatusNotFound {
 				return false, nil
 			}
-
-			return false, err
 		}
+
 		return false, err
 	}
 
 	return true, nil
+}
+
+func asHTTPError(err error) (bool, *osb.HTTPStatusCodeError) {
+	if err != nil {
+		httpErr, ok := osb.IsHTTPError(err)
+		if ok {
+			return true, httpErr
+		}
+		return false, nil
+	}
+
+	return false, nil
 }

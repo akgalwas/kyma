@@ -135,7 +135,8 @@ type SystemMappingSpec struct {
 
 type ServiceMeta struct {
 	PlanID     string  `json:"planId"`
-	InstanceId *string `json:"instanceId,omitempty"`
+	InstanceID *string `json:"instanceId,omitempty"`
+	BindingID  *string `json:"bindingId,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
