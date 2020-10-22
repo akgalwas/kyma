@@ -7,6 +7,7 @@ import (
 	"github.com/kyma-project/kyma/components/system-broker-agent/internal/synchronization/osbapi"
 	v1alpha12 "github.com/kyma-project/kyma/components/system-broker-agent/pkg/apis/applicationconnector/v1alpha1"
 	"github.com/sirupsen/logrus"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,6 +45,11 @@ func (r *reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	systemMapping := &v1alpha12.SystemMapping{}
 	if err := r.ctrlClient.Get(context.Background(), req.NamespacedName, systemMapping); err != nil {
+		if k8serrors.IsNotFound(err) {
+			r.log.Infof("SystemMapping %s deleted.", req.NamespacedName)
+			return ctrl.Result{}, nil
+		}
+
 		r.log.Errorf("Failed to get SystemMapping: %v", err)
 		return ctrl.Result{}, err
 	}
@@ -114,10 +120,12 @@ func (r *reconciler) unbindAndDeleteServiceInstances(systemMapping *v1alpha12.Sy
 
 	for _, service := range systemMapping.Spec.Services {
 		if service.BindingID != nil {
+			r.log.Infof("Unbinding Service Instance ", *service.InstanceID)
 			r.osbApiClient.Unbind(serviceID, service.PlanID, *service.InstanceID, *service.BindingID)
 		}
 
 		if service.InstanceID != nil {
+			r.log.Infof("Unbinding Service Instance ", *service.InstanceID)
 			r.osbApiClient.DeprovisionInstance(serviceID, service.PlanID, *service.InstanceID)
 		}
 	}
@@ -166,7 +174,9 @@ func (r *reconciler) createAndBindServiceInstance(systemMapping *v1alpha12.Syste
 
 	bindingID := uuid.New().String()
 	// TODO: use credentials to create a secret
-	if _, err := r.osbApiClient.Bind(serviceServiceID, servicePlanID, serviceInstanceID, bindingID); err != nil {
+	_, err = r.osbApiClient.Bind(serviceServiceID, servicePlanID, serviceInstanceID, bindingID)
+
+	if err != nil {
 		return err
 	}
 
